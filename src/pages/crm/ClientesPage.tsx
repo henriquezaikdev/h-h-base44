@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import {
   Users, UserPlus, RefreshCw, Clock, AlertTriangle, XCircle,
   Search, LayoutGrid, List, ChevronRight, ChevronLeft,
-  Phone, MessageCircle, ArrowRight, TrendingUp,
+  Phone, MessageCircle, ArrowRight, TrendingUp, X, MapPin, FileText,
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useSupabaseQuery } from '../../hooks/useSupabaseQuery'
+import { toTitleCase, fetchCodigoIbge } from '../../lib'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -174,16 +175,17 @@ export default function ClientesPage() {
   const canSeeAll      = role ? FULL_ACCESS.includes(role) : false
   const canSeeVendedor = canSeeAll
 
-  const [search,       setSearch]       = useState('')
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
-  const [sellerFilter, setSellerFilter] = useState('all')
-  const [classFilter,  setClassFilter]  = useState<KpiKey>('all')
-  const [viewMode,     setViewMode]     = useState<ViewMode>('table')
-  const [page,         setPage]         = useState(1)
+  const [search,          setSearch]          = useState('')
+  const [statusFilter,    setStatusFilter]    = useState<StatusFilter>('all')
+  const [sellerFilter,    setSellerFilter]    = useState('all')
+  const [classFilter,     setClassFilter]     = useState<KpiKey>('all')
+  const [viewMode,        setViewMode]        = useState<ViewMode>('table')
+  const [page,            setPage]            = useState(1)
+  const [newClientOpen,   setNewClientOpen]   = useState(false)
 
   // ── Fetch ────────────────────────────────────────────────────────────────
 
-  const { data, loading, error } = useSupabaseQuery<ClientesQueryResult>(
+  const { data, loading, error, refetch } = useSupabaseQuery<ClientesQueryResult>(
     async ({ company_id }) => {
       const [clientsRes, sellersRes] = await Promise.all([
         supabase
@@ -192,7 +194,7 @@ export default function ClientesPage() {
           .eq('company_id', company_id)
           .order('name'),
         canSeeVendedor
-          ? supabase.from('sellers').select('id, name').eq('company_id', company_id).eq('active', true).order('name')
+          ? supabase.from('sellers').select('id, name').eq('company_id', company_id).eq('is_active', true).order('name')
           : Promise.resolve({ data: [] as { id: string; name: string }[], error: null }),
       ])
       if (clientsRes.error) return { data: null, error: clientsRes.error }
@@ -253,21 +255,29 @@ export default function ClientesPage() {
             {loading ? 'Carregando…' : `${clients.length} cliente${clients.length !== 1 ? 's' : ''}`}
           </p>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => setViewMode('table')}
-            title="Tabela"
-            className={`p-2 rounded-lg transition-colors ${viewMode === 'table' ? 'bg-[#EEF2FF] text-[#3B5BDB]' : 'text-[#9CA3AF] hover:bg-[#F9FAFB]'}`}
+            onClick={() => setNewClientOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-[#3B5BDB] text-white rounded-lg hover:bg-[#3451C7] transition-colors"
           >
-            <List size={16} />
+            <UserPlus size={14} /> Novo Cliente
           </button>
-          <button
-            onClick={() => setViewMode('cards')}
-            title="Cards"
-            className={`p-2 rounded-lg transition-colors ${viewMode === 'cards' ? 'bg-[#EEF2FF] text-[#3B5BDB]' : 'text-[#9CA3AF] hover:bg-[#F9FAFB]'}`}
-          >
-            <LayoutGrid size={16} />
-          </button>
+          <div className="flex items-center gap-1 ml-1">
+            <button
+              onClick={() => setViewMode('table')}
+              title="Tabela"
+              className={`p-2 rounded-lg transition-colors ${viewMode === 'table' ? 'bg-[#EEF2FF] text-[#3B5BDB]' : 'text-[#9CA3AF] hover:bg-[#F9FAFB]'}`}
+            >
+              <List size={16} />
+            </button>
+            <button
+              onClick={() => setViewMode('cards')}
+              title="Cards"
+              className={`p-2 rounded-lg transition-colors ${viewMode === 'cards' ? 'bg-[#EEF2FF] text-[#3B5BDB]' : 'text-[#9CA3AF] hover:bg-[#F9FAFB]'}`}
+            >
+              <LayoutGrid size={16} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -550,6 +560,415 @@ export default function ClientesPage() {
             )}
           </>
         )}
+
+      </div>
+
+      {newClientOpen && (
+        <NewClientModal
+          onClose={() => setNewClientOpen(false)}
+          onSaved={() => { setNewClientOpen(false); refetch() }}
+        />
+      )}
+    </div>
+  )
+}
+
+// ─── NewClientModal ───────────────────────────────────────────────────────────
+
+const MONTHS_FULL = [
+  'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+  'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro',
+]
+
+const SELECT_CLS = "w-full text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 text-[#111827] outline-none focus:border-[#3B5BDB] focus:ring-2 focus:ring-[#3B5BDB]/20 bg-white transition"
+const INPUT_CLS  = "w-full text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 text-[#111827] placeholder-[#9CA3AF] outline-none focus:border-[#3B5BDB] focus:ring-2 focus:ring-[#3B5BDB]/20 transition"
+
+function ModalLabel({ children }: { children: React.ReactNode }) {
+  return <label className="block text-xs font-medium text-[#6B7280] mb-1">{children}</label>
+}
+
+function ModalSectionHeading({ icon: Icon, children }: { icon: React.ElementType; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-1.5 mb-3 pb-2 border-b border-[#F3F4F6]">
+      <Icon size={13} className="text-[#9CA3AF]" />
+      <span className="text-xs font-semibold text-[#6B7280] uppercase tracking-wide">{children}</span>
+    </div>
+  )
+}
+
+const EMPTY = {
+  name: '', email: '', phone: '', cnpj: '',
+  status: 'active' as 'active' | 'inactive',
+  origem: '', notes: '', seller_id: '',
+  city: '', state: '',
+  ie: '', zip_code: '', street: '', street_number: '', complement: '', neighborhood: '',
+  birthday_day: '', birthday_month: '',
+  unit_type: '', payment_term: '',
+  codigo_ibge: '',
+}
+
+function NewClientModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const { seller } = useAuth()
+  const [form, setForm]         = useState(EMPTY)
+  const [saving, setSaving]     = useState(false)
+  const [errMsg, setErrMsg]     = useState<string | null>(null)
+  const [cnpjLoading, setCnpjLoading] = useState(false)
+  const [cepLoading,  setCepLoading]  = useState(false)
+  const [sellers, setSellers]   = useState<{ id: string; name: string }[]>([])
+
+  useEffect(() => {
+    if (!seller) return
+    supabase.from('sellers').select('id, name').eq('company_id', seller.company_id).eq('is_active', true).order('name')
+      .then(({ data }) => setSellers((data ?? []) as { id: string; name: string }[]))
+  }, [seller])
+
+  async function handleCnpjBlur() {
+    const digits = form.cnpj.replace(/\D/g, '')
+    if (digits.length !== 14) return
+    setCnpjLoading(true)
+    try {
+      const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${digits}`)
+      if (!res.ok) return
+      const d = await res.json()
+      const city  = d.municipio ? toTitleCase(d.municipio) : ''
+      const state = (d.uf as string | undefined) || ''
+      setForm(p => ({
+        ...p,
+        name:          d.razao_social       || p.name,
+        ie:            d.inscricao_estadual || p.ie,
+        zip_code:      d.cep ? d.cep.replace(/\D/g, '') : p.zip_code,
+        street:        d.logradouro         || p.street,
+        street_number: d.numero             || p.street_number,
+        neighborhood:  d.bairro             || p.neighborhood,
+        city:          city                 || p.city,
+        state:         state                || p.state,
+      }))
+      if (city && state) {
+        const ibge = await fetchCodigoIbge(city, state)
+        if (ibge) setForm(p => ({ ...p, codigo_ibge: ibge }))
+      }
+    } catch { /* ignore */ } finally { setCnpjLoading(false) }
+  }
+
+  async function handleCepBlur() {
+    const digits = form.zip_code.replace(/\D/g, '')
+    if (digits.length !== 8) return
+    setCepLoading(true)
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`)
+      if (!res.ok) return
+      const d = await res.json()
+      if (d.erro) return
+      setForm(p => ({
+        ...p,
+        street:       d.logradouro || p.street,
+        neighborhood: d.bairro     || p.neighborhood,
+        city:         d.localidade || p.city,
+        state:        d.uf         || p.state,
+      }))
+    } catch { /* ignore */ } finally { setCepLoading(false) }
+  }
+
+  async function handleSave() {
+    if (!form.name.trim()) { setErrMsg('Nome é obrigatório.'); return }
+    if (!seller) return
+    setSaving(true)
+    setErrMsg(null)
+    const safetyTimer = setTimeout(() => setSaving(false), 10000)
+    try {
+      const { error } = await supabase.from('clients').insert({
+        company_id:     seller.company_id,
+        name:           form.name.trim(),
+        email:          form.email          || null,
+        phone:          form.phone          || null,
+        cnpj:           form.cnpj           || null,
+        status:         form.status,
+        origem:         form.origem         || null,
+        city:           form.city           ? toTitleCase(form.city) : null,
+        state:          form.state          || null,
+        notes:          form.notes          || null,
+        seller_id:      form.seller_id      || null,
+        ie:             form.ie             || null,
+        zip_code:       form.zip_code       || null,
+        street:         form.street         || null,
+        street_number:  form.street_number  || null,
+        complement:     form.complement     || null,
+        neighborhood:   form.neighborhood   || null,
+        birthday_day:   form.birthday_day   ? parseInt(form.birthday_day)   : null,
+        birthday_month: form.birthday_month ? parseInt(form.birthday_month) : null,
+        unit_type:      form.unit_type      || null,
+        payment_term:   form.payment_term   || null,
+        codigo_ibge:    form.codigo_ibge    || null,
+      })
+      if (error) { setErrMsg(error.message); return }
+      onSaved()
+    } finally {
+      clearTimeout(safetyTimer)
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB] shrink-0">
+          <h2 className="text-base font-semibold text-[#111827]">Novo Cliente</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-[#9CA3AF] hover:text-[#374151] hover:bg-[#F3F4F6] transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="overflow-y-auto flex-1 px-6 py-5 space-y-6">
+
+          {/* Dados Principais */}
+          <div>
+            <ModalSectionHeading icon={FileText}>Dados Principais</ModalSectionHeading>
+            <div className="grid grid-cols-2 gap-x-5 gap-y-4">
+
+              <div className="col-span-2">
+                <ModalLabel>Nome da Empresa *</ModalLabel>
+                <input
+                  type="text" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+                  placeholder="Razão Social"
+                  className={INPUT_CLS}
+                />
+              </div>
+
+              <div>
+                <ModalLabel>CNPJ</ModalLabel>
+                <div className="relative">
+                  <input
+                    type="text" value={form.cnpj}
+                    onChange={e => setForm(p => ({ ...p, cnpj: e.target.value }))}
+                    onBlur={handleCnpjBlur}
+                    placeholder="00.000.000/0001-00"
+                    className={INPUT_CLS}
+                  />
+                  {cnpjLoading && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#3B5BDB]">buscando…</span>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <ModalLabel>Inscrição Estadual (IE)</ModalLabel>
+                <input
+                  type="text" value={form.ie} onChange={e => setForm(p => ({ ...p, ie: e.target.value }))}
+                  placeholder="Isento ou número"
+                  className={INPUT_CLS}
+                />
+              </div>
+
+              <div>
+                <ModalLabel>E-mail</ModalLabel>
+                <input
+                  type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
+                  placeholder="email@empresa.com"
+                  className={INPUT_CLS}
+                />
+              </div>
+
+              <div>
+                <ModalLabel>Telefone / WhatsApp</ModalLabel>
+                <input
+                  type="text" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))}
+                  placeholder="(00) 00000-0000"
+                  className={INPUT_CLS}
+                />
+              </div>
+
+              <div>
+                <ModalLabel>Origem</ModalLabel>
+                <select value={form.origem} onChange={e => setForm(p => ({ ...p, origem: e.target.value }))} className={SELECT_CLS}>
+                  <option value="">Selecionar…</option>
+                  <option value="Google">Google</option>
+                  <option value="Indicação">Indicação</option>
+                  <option value="WhatsApp">WhatsApp</option>
+                  <option value="Instagram">Instagram</option>
+                  <option value="Outro">Outro</option>
+                </select>
+              </div>
+
+              <div>
+                <ModalLabel>Vendedor Responsável</ModalLabel>
+                <select value={form.seller_id} onChange={e => setForm(p => ({ ...p, seller_id: e.target.value }))} className={SELECT_CLS}>
+                  <option value="">Selecionar…</option>
+                  {sellers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <ModalLabel>Status</ModalLabel>
+                <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value as 'active' | 'inactive' }))} className={SELECT_CLS}>
+                  <option value="active">Ativo</option>
+                  <option value="inactive">Inativo</option>
+                </select>
+              </div>
+
+              <div>
+                <ModalLabel>Aniversário da Empresa</ModalLabel>
+                <div className="flex gap-2">
+                  <select value={form.birthday_day} onChange={e => setForm(p => ({ ...p, birthday_day: e.target.value }))} className={`flex-1 ${SELECT_CLS}`}>
+                    <option value="">Dia</option>
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                      <option key={d} value={String(d)}>{String(d).padStart(2, '0')}</option>
+                    ))}
+                  </select>
+                  <select value={form.birthday_month} onChange={e => setForm(p => ({ ...p, birthday_month: e.target.value }))} className={`flex-1 ${SELECT_CLS}`}>
+                    <option value="">Mês</option>
+                    {MONTHS_FULL.map((m, i) => <option key={i + 1} value={String(i + 1)}>{m}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div className="col-span-2">
+                <ModalLabel>Observações</ModalLabel>
+                <textarea
+                  value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
+                  rows={2} placeholder="Anotações sobre o cliente…"
+                  className="w-full text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 text-[#111827] placeholder-[#9CA3AF] outline-none focus:border-[#3B5BDB] focus:ring-2 focus:ring-[#3B5BDB]/20 transition resize-none"
+                />
+              </div>
+
+            </div>
+          </div>
+
+          {/* Endereço */}
+          <div>
+            <ModalSectionHeading icon={MapPin}>Endereço</ModalSectionHeading>
+            <div className="grid grid-cols-2 gap-x-5 gap-y-4">
+
+              <div>
+                <ModalLabel>CEP</ModalLabel>
+                <div className="relative">
+                  <input
+                    type="text" value={form.zip_code}
+                    onChange={e => setForm(p => ({ ...p, zip_code: e.target.value }))}
+                    onBlur={handleCepBlur}
+                    placeholder="00000-000"
+                    className={INPUT_CLS}
+                  />
+                  {cepLoading && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#3B5BDB]">buscando…</span>
+                  )}
+                </div>
+              </div>
+
+              <div />
+
+              <div className="col-span-2">
+                <ModalLabel>Logradouro</ModalLabel>
+                <input
+                  type="text" value={form.street} onChange={e => setForm(p => ({ ...p, street: e.target.value }))}
+                  placeholder="Rua, Av., etc."
+                  className={INPUT_CLS}
+                />
+              </div>
+
+              <div>
+                <ModalLabel>Número</ModalLabel>
+                <input
+                  type="text" value={form.street_number} onChange={e => setForm(p => ({ ...p, street_number: e.target.value }))}
+                  placeholder="123"
+                  className={INPUT_CLS}
+                />
+              </div>
+
+              <div>
+                <ModalLabel>Complemento</ModalLabel>
+                <input
+                  type="text" value={form.complement} onChange={e => setForm(p => ({ ...p, complement: e.target.value }))}
+                  placeholder="Sala, Andar, etc."
+                  className={INPUT_CLS}
+                />
+              </div>
+
+              <div>
+                <ModalLabel>Bairro</ModalLabel>
+                <input
+                  type="text" value={form.neighborhood} onChange={e => setForm(p => ({ ...p, neighborhood: e.target.value }))}
+                  placeholder="Bairro"
+                  className={INPUT_CLS}
+                />
+              </div>
+
+              <div>
+                <ModalLabel>Cidade</ModalLabel>
+                <input
+                  type="text" value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value }))}
+                  placeholder="Cidade"
+                  className={INPUT_CLS}
+                />
+              </div>
+
+              <div>
+                <ModalLabel>Estado</ModalLabel>
+                <input
+                  type="text" value={form.state} onChange={e => setForm(p => ({ ...p, state: e.target.value }))}
+                  placeholder="UF"
+                  className={INPUT_CLS}
+                />
+              </div>
+
+            </div>
+          </div>
+
+          {/* Informações Comerciais */}
+          <div>
+            <ModalSectionHeading icon={FileText}>Informações Comerciais</ModalSectionHeading>
+            <div className="grid grid-cols-2 gap-x-5 gap-y-4">
+
+              <div>
+                <ModalLabel>Tipo de Unidade</ModalLabel>
+                <select value={form.unit_type} onChange={e => setForm(p => ({ ...p, unit_type: e.target.value }))} className={SELECT_CLS}>
+                  <option value="">Selecionar…</option>
+                  <option value="Matriz">Matriz</option>
+                  <option value="Filial">Filial</option>
+                </select>
+              </div>
+
+              <div>
+                <ModalLabel>Prazo de Pagamento</ModalLabel>
+                <select value={form.payment_term} onChange={e => setForm(p => ({ ...p, payment_term: e.target.value }))} className={SELECT_CLS}>
+                  <option value="">Selecionar…</option>
+                  <option value="À vista">À vista</option>
+                  <option value="30 dias">30 dias</option>
+                  <option value="60 dias">60 dias</option>
+                  <option value="30/60">30/60</option>
+                  <option value="30/60/90">30/60/90</option>
+                </select>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-[#E5E7EB] shrink-0 flex items-center justify-between">
+          {errMsg
+            ? <p className="text-xs text-red-600">{errMsg}</p>
+            : <span />
+          }
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-[#374151] border border-[#E5E7EB] rounded-lg hover:bg-[#F9FAFB] transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-[#3B5BDB] text-white rounded-lg hover:bg-[#3451C7] disabled:opacity-60 transition-colors"
+            >
+              {saving ? 'Salvando…' : 'Salvar Cliente'}
+            </button>
+          </div>
+        </div>
 
       </div>
     </div>
