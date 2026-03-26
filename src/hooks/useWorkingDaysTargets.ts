@@ -61,10 +61,12 @@ export function useWorkingDaysTargets(sellerIdFilter?: string | null): WorkingDa
           supabase.from('orders').select('total').eq('seller_id', sellerIdFilter)
             .gte('created_at', monthStartStr).lte('created_at', monthEndStr),
           supabase.from('tasks').select('id', { count: 'exact', head: true })
-            .eq('assigned_to', sellerIdFilter).eq('status', 'done')
-            .gte('done_at', monthStartStr).lte('done_at', monthEndStr),
+            .eq('is_deleted', false).eq('status_crm', 'concluida')
+            .or(`created_by_seller_id.eq.${sellerIdFilter},assigned_to_seller_id.eq.${sellerIdFilter}`)
+            .gte('task_date', monthStartStr.split('T')[0]).lte('task_date', monthEndStr.split('T')[0]),
           supabase.from('tasks').select('id', { count: 'exact', head: true })
-            .eq('assigned_to', sellerIdFilter).eq('status', 'open'),
+            .eq('is_deleted', false).eq('status_crm', 'pendente')
+            .or(`created_by_seller_id.eq.${sellerIdFilter},assigned_to_seller_id.eq.${sellerIdFilter}`),
           supabase.from('sellers').select('id, name').eq('id', sellerIdFilter).maybeSingle(),
         ]);
 
@@ -92,10 +94,10 @@ export function useWorkingDaysTargets(sellerIdFilter?: string | null): WorkingDa
           supabase.from('orders').select('total')
             .gte('created_at', monthStartStr).lte('created_at', monthEndStr),
           supabase.from('tasks').select('id', { count: 'exact', head: true })
-            .eq('status', 'done')
-            .gte('done_at', monthStartStr).lte('done_at', monthEndStr),
+            .eq('is_deleted', false).eq('status_crm', 'concluida')
+            .gte('task_date', monthStartStr.split('T')[0]).lte('task_date', monthEndStr.split('T')[0]),
           supabase.from('tasks').select('id', { count: 'exact', head: true })
-            .eq('status', 'open'),
+            .eq('is_deleted', false).eq('status_crm', 'pendente'),
         ]);
 
         const orders = ordersRes.data || [];

@@ -87,13 +87,14 @@ async function fetchEvolutionData(
   const currentMonthOrderCount = orders.length;
 
   // 2. Tasks concluídas no mês (schema 2.0)
+  // Usa task_date para filtro de mês (completed_at pode ser null em tarefas antigas)
   const { data: completedTasksData } = await supabase
     .from('tasks')
-    .select('completed_at, contact_type')
+    .select('completed_at, task_date, contact_type')
     .eq('is_deleted', false)
     .eq('status_crm', 'concluida')
-    .gte('completed_at', monthStartStr + 'T00:00:00')
-    .lte('completed_at', monthEndStr + 'T23:59:59')
+    .gte('task_date', monthStartStr)
+    .lte('task_date', monthEndStr)
     .or(`created_by_seller_id.eq.${sellerId},assigned_to_seller_id.eq.${sellerId}`);
 
   const completedTasks = completedTasksData || [];
@@ -126,8 +127,10 @@ async function fetchEvolutionData(
   });
 
   completedTasks.forEach((task: any) => {
-    if (!task.completed_at) return;
-    const dateStr = toBrtDateStr(task.completed_at);
+    // Usa completed_at se disponível, senão usa task_date
+    const dateSource = task.completed_at || task.task_date;
+    if (!dateSource) return;
+    const dateStr = task.completed_at ? toBrtDateStr(task.completed_at) : dateSource;
     const activity = activityMap.get(dateStr);
     if (activity) {
       activity.tasksCompleted++;
