@@ -94,16 +94,23 @@ async function fetchEvolutionData(
     .eq('assigned_to', sellerId)
     .eq('status', 'open');
 
-  // Build daily activity map from completed tasks
+  // Build daily activity map — inclui TODOS os dias do mês (não só úteis)
+  // para não perder vendas de sábado/domingo
   const activityMap = new Map<string, DailyActivity>();
-  workDays.forEach(day => {
+  allDays.forEach(day => {
     const dateStr = format(day, 'yyyy-MM-dd');
     activityMap.set(dateStr, { date: dateStr, sales: 0, tasksCompleted: 0 });
   });
 
+  // Converte UTC para Brasília (UTC-3) antes de extrair a data
+  const toBrtDateStr = (isoStr: string): string => {
+    const date = new Date(isoStr.replace(' ', 'T'));
+    return format(new Date(date.getTime() - 3 * 60 * 60 * 1000), 'yyyy-MM-dd');
+  };
+
   orders.forEach(order => {
     if (!order.created_at) return;
-    const dateStr = order.created_at.split('T')[0];
+    const dateStr = toBrtDateStr(order.created_at);
     const activity = activityMap.get(dateStr);
     if (activity) {
       activity.sales += order.total || 0;
@@ -112,7 +119,7 @@ async function fetchEvolutionData(
 
   completedTasks.forEach(task => {
     if (!task.done_at) return;
-    const dateStr = task.done_at.split('T')[0];
+    const dateStr = toBrtDateStr(task.done_at);
     const activity = activityMap.get(dateStr);
     if (activity) {
       activity.tasksCompleted++;

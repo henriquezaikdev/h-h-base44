@@ -58,12 +58,15 @@ export function PerformanceTab({
   currentMonthTasksOpen, workDaysInMonth, workDaysPassed,
   dailyActivities, previousMonthSales,
 }: PerformanceTabProps) {
-  // Chart data
+  // Chart data — mostra vendas e tarefas, filtra dias sem atividade
   const chartData = useMemo(() => {
-    return dailyActivities.slice(-20).map(d => ({
-      date: d.date.slice(5),
-      Tarefas: d.tasksCompleted,
-    }));
+    return dailyActivities
+      .filter(d => d.sales > 0 || d.tasksCompleted > 0)
+      .map(d => ({
+        date: d.date.slice(5),
+        Vendas: Math.round(d.sales),
+        Tarefas: d.tasksCompleted,
+      }));
   }, [dailyActivities]);
 
   // Sales projection
@@ -139,21 +142,28 @@ export function PerformanceTab({
       </Card>
 
       {/* Daily Activities Chart */}
-      {chartData.length > 0 && (
+      {dailyActivities.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Tarefas Concluidas por Dia</CardTitle>
+            <CardTitle className="text-sm">Atividade do Mes</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <RechartsTooltip />
-                <Bar dataKey="Tarefas" fill="#6366f1" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} />
+                  <RechartsTooltip />
+                  <Bar dataKey="Vendas" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Tarefas" fill="#10b981" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center py-12">
+                <p className="text-sm text-muted-foreground">Nenhuma atividade registrada neste periodo</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
