@@ -447,7 +447,7 @@ export default function TarefasPage() {
       abertas:    regularTasks.filter(tk => tk.status === 'open').length,
       hoje:       regularTasks.filter(tk => tk.status === 'open' && tk.due_date === t).length,
       atrasadas:  regularTasks.filter(tk => tk.status === 'open' && tk.due_date != null && tk.due_date < t).length,
-      concluidas: regularTasks.filter(tk => tk.status === 'completed' && tk.done_at != null && new Date(tk.done_at) >= d30).length,
+      concluidas: regularTasks.filter(tk => tk.status === 'done' && tk.done_at != null && new Date(tk.done_at) >= d30).length,
     }
   }, [regularTasks, t])
 
@@ -461,7 +461,7 @@ export default function TarefasPage() {
       )
     }
     if (statusFilter === 'abertas')    list = list.filter(tk => tk.status === 'open')
-    if (statusFilter === 'concluidas') list = list.filter(tk => tk.status === 'completed')
+    if (statusFilter === 'concluidas') list = list.filter(tk => tk.status === 'done')
     if (statusFilter === 'atrasadas')  list = list.filter(tk => tk.status === 'open' && tk.due_date != null && tk.due_date < t)
     if (prioFilter !== 'todas')        list = list.filter(tk => tk.priority === prioFilter)
     if (sellerFilter)                  list = list.filter(tk => tk.assigned_to === sellerFilter)
@@ -502,7 +502,7 @@ export default function TarefasPage() {
 
   async function completeTask(id: string) {
     await supabase.from('tasks')
-      .update({ status: 'completed', done_at: new Date().toISOString() })
+      .update({ status: 'done', done_at: new Date().toISOString() })
       .eq('id', id)
     refetch()
   }

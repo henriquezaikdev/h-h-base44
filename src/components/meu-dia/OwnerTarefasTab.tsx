@@ -40,38 +40,46 @@ function MetricCard({ label, value, color = 'neutral' }: { label: string; value:
 }
 
 export function OwnerTarefasTab({ sellers }: { sellers: SellerRow[] }) {
-  const { seller } = useAuth();
-  const { tasks, loading } = useTasksData(undefined, seller?.id);
+  const { seller, role } = useAuth();
+  const { tasks, loading } = useTasksData(undefined, seller?.id, role);
   const queryClient = useQueryClient();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({ alta: true, media: true, baixa: false });
-  const [delegatePrefill, setDelegatePrefill] = useState('');
-  const [queryError, setQueryError] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({ alta: true, normal: true, baixa: false });
+  const [delegatePrefill] = useState('');
   const [editingTask, setEditingTask] = useState<TaskData | null>(null);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
 
   const today = startOfDay(new Date());
 
+  // My tasks: open tasks assigned to me OR without assignee (owner sees unassigned too)
   const myTasks = useMemo(() =>
-    (tasks || []).filter(t => t.status !== 'concluida' && t.createdBySellerId === seller?.id &&
-      (!t.assignedToSellerId || t.assignedToSellerId === seller?.id)),
+    (tasks || []).filter(t => t.status === 'open' && t.assignedTo === seller?.id),
     [tasks, seller?.id]
   );
 
+  // Delegated: open tasks assigned to other sellers
   const delegatedByMe = useMemo(() =>
-    (tasks || []).filter(t => t.createdBySellerId === seller?.id &&
-      t.assignedToSellerId && t.assignedToSellerId !== seller?.id &&
-      (t.status === 'pendente' || (t.status === 'concluida' && !t.managerConfirmedAt))),
+    (tasks || []).filter(t =>
+      t.assignedTo && t.assignedTo !== seller?.id && t.status === 'open'),
     [tasks, seller?.id]
   );
 
-  const dueToday = useMemo(() => (tasks || []).filter(t => t.status !== 'concluida' && isToday(new Date(t.taskDate))).length, [tasks]);
-  const overdue = useMemo(() => (tasks || []).filter(t => t.status !== 'concluida' &&
-    isBefore(new Date(t.taskDate), today)).length, [tasks, today]);
+  const dueToday = useMemo(() =>
+    myTasks.filter(t => t.dueDate && isToday(new Date(t.dueDate))).length,
+    [myTasks]
+  );
+
+  const overdue = useMemo(() =>
+    myTasks.filter(t => t.dueDate && isBefore(new Date(t.dueDate), today)).length,
+    [myTasks, today]
+  );
 
   const groupByPriority = (list: TaskData[]) => {
-    const grouped: Record<string, TaskData[]> = { alta: [], media: [], baixa: [] };
-    list.forEach(t => grouped[t.priority]?.push(t));
+    const grouped: Record<string, TaskData[]> = { urgente: [], alta: [], normal: [], baixa: [] };
+    list.forEach(t => {
+      if (grouped[t.priority]) grouped[t.priority].push(t);
+      else grouped['normal'].push(t);
+    });
     return grouped;
   };
 
@@ -85,7 +93,7 @@ export function OwnerTarefasTab({ sellers }: { sellers: SellerRow[] }) {
   const delegatedGrouped = useMemo(() => {
     const g: Record<string, TaskData[]> = {};
     delegatedByMe.forEach(t => {
-      const key = t.assignedToSellerId || 'unknown';
+      const key = t.assignedTo || 'unknown';
       if (!g[key]) g[key] = [];
       g[key].push(t);
     });
@@ -93,41 +101,15 @@ export function OwnerTarefasTab({ sellers }: { sellers: SellerRow[] }) {
   }, [delegatedByMe]);
 
   const completeTask = async (taskId: string) => {
-    await supabase.from('tasks').update({ status: 'concluida', completed_at: new Date().toISOString() }).eq('id', taskId);
+    await supabase.from('tasks').update({
+      status: 'done',
+      done_at: new Date().toISOString(),
+    }).eq('id', taskId);
     queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    queryClient.invalidateQueries({ queryKey: ['actionCenter'] });
     toast.success('Tarefa concluida!');
   };
 
-  const confirmDelegatedTask = async (taskId: string) => {
-    await supabase.from('tasks').update({ manager_confirmed_at: new Date().toISOString() } as Record<string, unknown>).eq('id', taskId);
-    queryClient.invalidateQueries({ queryKey: ['tasks'] });
-  };
-
-  const completeAndConfirmTask = async (taskId: string) => {
-    const now = new Date().toISOString();
-    await supabase.from('tasks').update({
-      status: 'concluida',
-      completed_at: now,
-      manager_confirmed_at: now,
-    } as Record<string, unknown>).eq('id', taskId);
-    toast.success('Tarefa concluida e confirmada!');
-    queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    queryClient.invalidateQueries({ queryKey: ['actionCenter'] });
-  };
-
-  const priorityLabel: Record<string, string> = { alta: 'Alta', media: 'Media', baixa: 'Baixa' };
-
-  if (!tasks || (tasks.length === 0 && !loading && queryError)) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 gap-3">
-        <p className="text-sm text-muted-foreground">Erro ao carregar tarefas. Tente novamente.</p>
-        <Button size="sm" variant="outline" onClick={() => { setQueryError(false); queryClient.invalidateQueries({ queryKey: ['tasks'] }); }}>
-          Tentar novamente
-        </Button>
-      </div>
-    );
-  }
+  const priorityLabel: Record<string, string> = { urgente: 'Urgente', alta: 'Alta', normal: 'Normal', baixa: 'Baixa' };
 
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
@@ -150,7 +132,7 @@ export function OwnerTarefasTab({ sellers }: { sellers: SellerRow[] }) {
       <div className="rounded-xl p-5 bg-card border border-border shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <span className="text-[11px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">Minhas Tarefas</span>
-          <Button size="sm" onClick={() => { setDelegatePrefill(''); setDrawerOpen(true); }} className="gap-1.5 text-[11px]">
+          <Button size="sm" onClick={() => setDrawerOpen(true)} className="gap-1.5 text-[11px]">
             <Plus className="h-3 w-3" /> Nova Tarefa
           </Button>
         </div>
@@ -161,7 +143,7 @@ export function OwnerTarefasTab({ sellers }: { sellers: SellerRow[] }) {
           </div>
         ) : (
           <div className="space-y-3">
-            {(['alta', 'media', 'baixa'] as const).map(p => {
+            {(['urgente', 'alta', 'normal', 'baixa'] as const).map(p => {
               const items = grouped[p];
               if (!items?.length) return null;
               return (
@@ -176,16 +158,18 @@ export function OwnerTarefasTab({ sellers }: { sellers: SellerRow[] }) {
                       {items.map(t => (
                         <div key={t.id} className={cn(
                           "flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer hover:shadow-sm",
-                          isBefore(new Date(t.taskDate), today) ? "border-destructive/20 bg-destructive/5" : "border-border bg-card"
+                          t.dueDate && isBefore(new Date(t.dueDate), today) ? "border-destructive/20 bg-destructive/5" : "border-border bg-card"
                         )} onClick={() => setEditingTask(t)}>
                           <div className="flex-1 min-w-0">
-                            <p className="text-[13px] font-medium truncate text-foreground">{t.clientName || t.planningNotes || t.notes || 'Tarefa Geral'}</p>
-                            {(t.clientName && (t.planningNotes || t.notes)) && (
-                              <p className="text-[11px] text-muted-foreground truncate mt-0.5">{t.planningNotes || t.notes}</p>
+                            <p className="text-[13px] font-medium truncate text-foreground">{t.title || t.clientName || 'Tarefa Geral'}</p>
+                            {t.description && (
+                              <p className="text-[11px] text-muted-foreground truncate mt-0.5">{t.description}</p>
                             )}
                             <div className="flex items-center gap-2 mt-1">
-                              {t.taskCategory && <span className="bg-muted text-muted-foreground px-1.5 py-0.5 rounded text-[10px]">{t.taskCategory}</span>}
-                              <span className="text-[11px] text-muted-foreground">{format(new Date(t.taskDate), 'dd/MM')}</span>
+                              {t.dueDate && <span className="text-[11px] text-muted-foreground">{format(new Date(t.dueDate), 'dd/MM')}</span>}
+                              {t.assignedTo && sellerMap[t.assignedTo] && (
+                                <span className="text-[11px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{sellerMap[t.assignedTo]}</span>
+                              )}
                             </div>
                           </div>
                           <div className="flex items-center gap-1 shrink-0">
@@ -210,14 +194,15 @@ export function OwnerTarefasTab({ sellers }: { sellers: SellerRow[] }) {
         )}
       </div>
 
+      {/* Delegated tasks */}
       <div className="rounded-xl p-5 bg-card border border-border shadow-sm">
-        <span className="text-[11px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">Delegadas por mim</span>
+        <span className="text-[11px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">Delegadas / Equipe</span>
         {delegatedByMe.length === 0 ? (
           <p className="text-[13px] mt-4 text-center py-4 text-muted-foreground">Nenhuma tarefa delegada</p>
         ) : (
           <div className="space-y-4 mt-4">
             {Object.entries(delegatedGrouped).map(([sellerId, items]) => {
-              const hasOverdue = items.some(t => isBefore(new Date(t.taskDate), today));
+              const hasOverdue = items.some(t => t.dueDate && isBefore(new Date(t.dueDate), today));
               return (
                 <div key={sellerId}>
                   <div className="flex items-center gap-2 mb-2">
@@ -228,44 +213,30 @@ export function OwnerTarefasTab({ sellers }: { sellers: SellerRow[] }) {
                     {hasOverdue && <span className="bg-destructive/10 text-destructive border border-destructive/30 px-1.5 py-0.5 rounded text-[10px] font-semibold">Atraso</span>}
                   </div>
                   <div className="space-y-1 ml-8">
-                    {items.map(t => {
-                      const isCompleted = t.status === 'concluida' && !t.managerConfirmedAt;
-                      return (
-                        <div key={t.id} className={cn(
-                          "flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:ring-1 hover:ring-primary/30 transition-all",
-                          isCompleted
-                            ? "border-emerald-500/40 bg-emerald-500/10"
-                            : isBefore(new Date(t.taskDate), today) ? "border-destructive/20 bg-destructive/5" : "border-border bg-card"
-                        )} onClick={() => setEditingTask(t)}>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[13px] truncate text-foreground">{t.clientName || t.planningNotes || t.notes || 'Tarefa Geral'}</p>
-                            <span className="text-[11px] text-muted-foreground">{format(new Date(t.taskDate), 'dd/MM')}</span>
-                          </div>
-                          {isCompleted ? (
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-500/15 px-2 py-0.5 rounded-full">Concluida</span>
-                              <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); confirmDelegatedTask(t.id); }} className="h-7 px-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white">
-                                OK
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className={cn(
-                                "text-[10px] px-1.5 py-0.5 rounded font-semibold border",
-                                isBefore(new Date(t.taskDate), today)
-                                  ? 'bg-destructive/10 text-destructive border-destructive/30'
-                                  : 'bg-muted text-muted-foreground border-border'
-                              )}>
-                                {isBefore(new Date(t.taskDate), today) ? 'Atrasada' : 'Pendente'}
-                              </span>
-                              <Button size="sm" onClick={(e) => { e.stopPropagation(); completeAndConfirmTask(t.id); }} className="h-7 px-2 text-xs bg-primary hover:bg-primary/90 text-primary-foreground">
-                                Concluir
-                              </Button>
-                            </div>
-                          )}
+                    {items.map(t => (
+                      <div key={t.id} className={cn(
+                        "flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:ring-1 hover:ring-primary/30 transition-all",
+                        t.dueDate && isBefore(new Date(t.dueDate), today) ? "border-destructive/20 bg-destructive/5" : "border-border bg-card"
+                      )} onClick={() => setEditingTask(t)}>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] truncate text-foreground">{t.title || t.clientName || 'Tarefa Geral'}</p>
+                          {t.dueDate && <span className="text-[11px] text-muted-foreground">{format(new Date(t.dueDate), 'dd/MM')}</span>}
                         </div>
-                      );
-                    })}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className={cn(
+                            "text-[10px] px-1.5 py-0.5 rounded font-semibold border",
+                            t.dueDate && isBefore(new Date(t.dueDate), today)
+                              ? 'bg-destructive/10 text-destructive border-destructive/30'
+                              : 'bg-muted text-muted-foreground border-border'
+                          )}>
+                            {t.dueDate && isBefore(new Date(t.dueDate), today) ? 'Atrasada' : 'Pendente'}
+                          </span>
+                          <Button size="sm" onClick={(e) => { e.stopPropagation(); completeTask(t.id); }} className="h-7 px-2 text-xs bg-primary hover:bg-primary/90 text-primary-foreground">
+                            Concluir
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               );
@@ -299,7 +270,6 @@ export function OwnerTarefasTab({ sellers }: { sellers: SellerRow[] }) {
           onDeleted={() => {
             setDeletingTaskId(null);
             queryClient.invalidateQueries({ queryKey: ['tasks'] });
-            queryClient.invalidateQueries({ queryKey: ['actionCenter'] });
           }}
         />
       )}

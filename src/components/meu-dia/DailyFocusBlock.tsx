@@ -35,7 +35,7 @@ export function DailyFocusBlock({
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-5 space-y-3 bg-card border border-border rounded-xl shadow-hh-sm"
+      className="p-5 space-y-3 bg-card border border-border rounded-xl shadow-sm"
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -67,19 +67,19 @@ export function DailyFocusBlock({
             <div key={taskId}
               className={cn(
                 "flex items-center gap-3 p-3 rounded-lg border transition-colors",
-                completedAt ? "border-status-success/30 bg-status-success/5" : "border-border bg-card hover:border-border cursor-pointer"
+                completedAt ? "border-emerald-500/30 bg-emerald-500/5" : "border-border bg-card hover:border-border cursor-pointer"
               )}
               onClick={() => !completedAt && onTaskClick(task)}>
               {completedAt ? (
-                <CheckCircle2 className="h-5 w-5 shrink-0 text-status-success" />
+                <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" />
               ) : (
                 <div className="w-5 h-5 rounded-full border-2 shrink-0 border-primary" />
               )}
               <div className="flex-1 min-w-0">
                 <p className={cn("text-[13px] font-medium truncate", completedAt ? "line-through text-muted-foreground" : "text-foreground")}>
-                  {task.clientName || task.notes?.substring(0, 30) || task.planningNotes?.substring(0, 30) || 'Tarefa Geral'}
+                  {task.title || task.clientName || 'Tarefa Geral'}
                 </p>
-                {task.notes && <p className="text-[11px] truncate text-muted-foreground">{task.notes}</p>}
+                {task.description && <p className="text-[11px] truncate text-muted-foreground">{task.description}</p>}
               </div>
               {!completedAt && (
                 <Button size="sm" variant="ghost" className="h-7 w-7 p-0"
@@ -88,7 +88,7 @@ export function DailyFocusBlock({
                 </Button>
               )}
               {completedAt && (
-                <span className="hh-badge-success text-[10px]">+5 XP</span>
+                <span className="text-[10px] bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 rounded font-semibold">+5 XP</span>
               )}
             </div>
           ))}
@@ -107,10 +107,8 @@ export function DailyFocusBlock({
                   onClick={() => onAddFocus(task.id)}>
                   <Zap className="h-4 w-4 shrink-0 text-primary" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-medium truncate text-foreground">{task.clientName}</p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {task.priority === 'alta' ? 'Alta' : task.priority === 'media' ? 'Media' : 'Baixa'}
-                    </p>
+                    <p className="text-[13px] font-medium truncate text-foreground">{task.title || task.clientName}</p>
+                    <p className="text-[11px] text-muted-foreground capitalize">{task.priority}</p>
                   </div>
                   <Plus className="h-4 w-4 shrink-0 text-primary" />
                 </div>
@@ -129,14 +127,14 @@ export function DailyFocusBlock({
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
             <p className="text-[11px] mb-2 text-muted-foreground">Selecione mais tarefas:</p>
             {allTasks
-              .filter((t) => t.status === 'pendente' && !focusTaskIds.has(t.id))
+              .filter((t) => t.status === 'open' && !focusTaskIds.has(t.id))
               .slice(0, 5)
               .map((task) => (
                 <div key={task.id}
                   className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted cursor-pointer transition-colors"
                   onClick={() => { onAddFocus(task.id); setShowSuggestions(false); }}>
                   <Plus className="h-3 w-3 text-muted-foreground" />
-                  <span className="text-[13px] truncate text-foreground">{task.clientName}</span>
+                  <span className="text-[13px] truncate text-foreground">{task.title || task.clientName}</span>
                 </div>
               ))}
           </motion.div>

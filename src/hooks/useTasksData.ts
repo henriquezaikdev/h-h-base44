@@ -1,162 +1,115 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 
-export type ContactReason = 'RETORNO' | 'ACOMPANHAMENTO' | 'VENDA' | 'POS_VENDA';
-
-export const CONTACT_REASON_OPTIONS: { value: ContactReason; label: string; color: string }[] = [
-  { value: 'RETORNO', label: 'Retorno', color: 'bg-blue-500/10 text-blue-600 border-blue-500/30' },
-  { value: 'ACOMPANHAMENTO', label: 'Acompanhamento', color: 'bg-purple-500/10 text-purple-600 border-purple-500/30' },
-  { value: 'VENDA', label: 'Venda', color: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' },
-  { value: 'POS_VENDA', label: 'Pos-venda', color: 'bg-amber-500/10 text-amber-600 border-amber-500/30' },
-];
-
-export interface PlanningProduct {
-  name: string;
-  price: string;
-  deadline: string;
-  product_id?: string;
-  isManual?: boolean;
-}
-
+/**
+ * TaskData — baseado no schema REAL da tabela tasks (BANCO.md)
+ * Colunas reais: id, company_id, title, description, client_id, assigned_to,
+ *   priority (baixa|normal|alta|urgente), due_date, done_at, status (open|completed|cancelled),
+ *   is_recurring, created_at, updated_at
+ */
 export interface TaskData {
   id: string;
-  clientId: string;
+  title: string;
+  description: string | null;
+  clientId: string | null;
   clientName: string;
-  clientRankingTier: string;
   clientSellerId: string | null;
-  contactType: 'ligacao' | 'whatsapp';
-  contactReason: ContactReason;
-  taskDate: string;
-  taskTime: string | null;
-  notes: string | null;
-  status: 'pendente' | 'concluida';
-  managerConfirmedAt?: string | null;
+  assignedTo: string | null;
+  assignedToName: string;
+  priority: 'baixa' | 'normal' | 'alta' | 'urgente';
+  dueDate: string | null;
+  doneAt: string | null;
+  status: 'open' | 'done' | 'cancelled';
+  isRecurring: boolean;
   createdAt: string;
-  completedAt: string | null;
-  createdBySellerId: string | null;
-  assignedToSellerId?: string | null;
-  priority: 'alta' | 'media' | 'baixa';
-  planningProducts?: PlanningProduct[];
-  planningNotes?: string;
-  temOrcamentoAberto: boolean;
-  orcamentoCaCodigo: string | null;
-  orcamentoValor: number | null;
-  orcamentoAbertoEm: string | null;
-  taskSteps?: Array<{ label: string; done: boolean; done_at: string | null }>;
-  taskCategory?: string;
-  operationalError?: boolean;
-  errorNote?: string | null;
-  sourceModule?: string | null;
-  relatedType?: string | null;
-  relatedId?: string | null;
-  createdByTrigger?: boolean;
+  updatedAt: string;
 }
 
-async function fetchTasksData(clientId?: string, sellerId?: string | null): Promise<TaskData[]> {
+interface FetchOptions {
+  clientId?: string;
+  sellerId?: string | null;
+  role?: string | null;
+}
+
+async function fetchTasksData({ clientId, sellerId, role }: FetchOptions): Promise<TaskData[]> {
+  const isAdminOrOwner = role === 'owner' || role === 'admin';
+
   let query = supabase
     .from('tasks')
     .select(`
-      *,
-      contact_reason,
-      clients!tasks_client_id_fkey(
-        id,
-        company_name,
-        ranking_tier,
-        seller_id
-      )
+      id, title, description, client_id, assigned_to,
+      priority, due_date, done_at, status, is_recurring,
+      created_at, updated_at,
+      clients(id, name, seller_id)
     `)
-    .eq('is_deleted', false);
+    .neq('status', 'cancelled')
+    .not('assigned_to', 'is', null);
 
-  if (!clientId) {
-    // Fetch pending tasks + completed delegated tasks awaiting manager confirmation
-    if (sellerId) {
-      query = query.or(
-        `and(status.eq.pendente,or(created_by_seller_id.eq.${sellerId},assigned_to_seller_id.eq.${sellerId})),` +
-        `and(status.eq.concluida,manager_confirmed_at.is.null,created_by_seller_id.eq.${sellerId},assigned_to_seller_id.neq.${sellerId})`
-      );
-    } else {
-      query = query.eq('status', 'pendente');
-    }
-  }
-
+  // Filtro por cliente específico
   if (clientId) {
     query = query.eq('client_id', clientId);
   }
 
-  // Remove the old sellerId filter since it's now embedded in the status OR above
-  // (only apply if clientId is set — for client-specific views)
-  if (sellerId && clientId) {
-    query = query.or(`created_by_seller_id.eq.${sellerId},assigned_to_seller_id.eq.${sellerId}`);
+  // Owner/admin vê TODAS as tarefas da empresa (RLS filtra por company_id)
+  // Vendedor vê apenas tarefas atribuídas a ele
+  if (sellerId && !clientId && !isAdminOrOwner) {
+    query = query.eq('assigned_to', sellerId);
   }
 
-  // For seller feed, prioritize pending tasks first to avoid old completed items consuming the limit.
-  if (!clientId && sellerId) {
+  if (!clientId) {
     query = query
-      .order('status', { ascending: false })
-      .order('task_date', { ascending: true });
+      .order('status', { ascending: true })
+      .order('due_date', { ascending: true, nullsFirst: false });
   } else {
-    query = query.order('task_date', { ascending: true });
+    query = query.order('due_date', { ascending: true, nullsFirst: false });
   }
 
-  // Hard limit to prevent memory issues
-  query = query.limit(clientId ? 200 : sellerId ? 300 : 50);
+  // Owner/admin precisa de mais registros já que vê tudo
+  query = query.limit(clientId ? 200 : isAdminOrOwner ? 500 : 300);
 
   const { data, error } = await query;
 
   if (error) {
-    console.error('Error fetching tasks:', error);
+    console.error('[useTasksData] Error:', error.message, error.details);
     throw error;
   }
 
-  const allData = data || [];
+  console.log(`[useTasksData] Retornou ${(data || []).length} tarefas (role=${role}, sellerId=${sellerId}, clientId=${clientId})`);
+  if (data && data.length > 0) {
+    console.log('[useTasksData] Amostra raw:', JSON.stringify(data[0], null, 2));
+  }
 
-  return allData.map((t: any) => ({
+  return (data || []).map((t: any) => ({
     id: t.id,
-    clientId: t.client_id,
-    clientName: t.clients?.company_name || '',
-    clientRankingTier: t.clients?.ranking_tier || 'eventual',
+    title: t.title || '',
+    description: t.description || null,
+    clientId: t.client_id || null,
+    clientName: t.clients?.name || '',
     clientSellerId: t.clients?.seller_id ?? null,
-    contactType: t.contact_type as 'ligacao' | 'whatsapp',
-    contactReason: (t.contact_reason as ContactReason) || 'RETORNO',
-    taskDate: t.task_date,
-    taskTime: t.task_time,
-    notes: t.notes,
-    status: t.status as 'pendente' | 'concluida',
+    assignedTo: t.assigned_to || null,
+    assignedToName: '',
+    priority: (t.priority as TaskData['priority']) || 'normal',
+    dueDate: t.due_date || null,
+    doneAt: t.done_at || null,
+    status: (t.status as TaskData['status']) || 'open',
+    isRecurring: t.is_recurring || false,
     createdAt: t.created_at,
-    completedAt: t.completed_at,
-    createdBySellerId: t.created_by_seller_id,
-    assignedToSellerId: t.assigned_to_seller_id || null,
-    priority: (t.priority as 'alta' | 'media' | 'baixa') || 'media',
-    planningProducts: (t.planning_products as PlanningProduct[]) || [],
-    planningNotes: (t.planning_notes as string) || '',
-    temOrcamentoAberto: t.tem_orcamento_aberto || false,
-    orcamentoCaCodigo: t.orcamento_ca_codigo || null,
-    orcamentoValor: t.orcamento_valor || null,
-    orcamentoAbertoEm: t.orcamento_aberto_em || null,
-    taskSteps: (t.task_steps as any[]) || [],
-    taskCategory: t.task_category || '',
-    operationalError: t.operational_error || false,
-    errorNote: t.error_note || null,
-    sourceModule: t.source_module || null,
-    relatedType: t.related_type || null,
-    relatedId: t.related_id || null,
-    createdByTrigger: t.created_by_trigger || false,
-    managerConfirmedAt: t.manager_confirmed_at || null,
+    updatedAt: t.updated_at,
   }));
 }
 
-export function useTasksData(clientId?: string, sellerId?: string | null) {
+export function useTasksData(clientId?: string, sellerId?: string | null, role?: string | null) {
   const queryClient = useQueryClient();
 
   const { data: tasks = [], isLoading: loading } = useQuery({
-    queryKey: ['tasks', clientId ?? '__none__', sellerId ?? '__none__'],
-    queryFn: () => fetchTasksData(clientId, sellerId),
+    queryKey: ['tasks', clientId ?? '__none__', sellerId ?? '__none__', role ?? '__none__'],
+    queryFn: () => fetchTasksData({ clientId, sellerId, role }),
     staleTime: 1000 * 60 * 2,
     gcTime: 1000 * 60 * 10,
   });
 
   const refetch = () => {
-    queryClient.invalidateQueries({ queryKey: ['tasks', clientId ?? '__none__', sellerId ?? '__none__'] });
+    queryClient.invalidateQueries({ queryKey: ['tasks'] });
   };
 
   return { tasks, loading, refetch };

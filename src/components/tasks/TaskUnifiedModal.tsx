@@ -31,11 +31,11 @@ export function TaskUnifiedModal({
 }: TaskUnifiedModalProps) {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
-  const [notes, setNotes] = useState(task?.notes || '');
-  const [planningNotes, setPlanningNotes] = useState(task?.planningNotes || '');
-  const [priority, setPriority] = useState<'alta' | 'media' | 'baixa'>(task?.priority || 'media');
-  const [assignedTo, setAssignedTo] = useState(task?.assignedToSellerId || '__none__');
-  const [status, setStatus] = useState(task?.status || 'pendente');
+  const [title, setTitle] = useState(task?.title || '');
+  const [description, setDescription] = useState(task?.description || '');
+  const [priority, setPriority] = useState<TaskData['priority']>(task?.priority || 'normal');
+  const [assignedTo, setAssignedTo] = useState(task?.assignedTo || '__none__');
+  const [status, setStatus] = useState(task?.status || 'open');
 
   const isEdit = mode === 'edit' && task;
 
@@ -44,14 +44,14 @@ export function TaskUnifiedModal({
     setSaving(true);
     try {
       const updates: Record<string, unknown> = {
-        notes: notes || null,
-        planning_notes: planningNotes || null,
+        title: title || null,
+        description: description || null,
         priority,
-        assigned_to_seller_id: assignedTo === '__none__' ? null : assignedTo,
+        assigned_to: assignedTo === '__none__' ? null : assignedTo,
         status,
       };
-      if (status === 'concluida' && task.status !== 'concluida') {
-        updates.completed_at = new Date().toISOString();
+      if (status === 'done' && task.status !== 'done') {
+        updates.done_at = new Date().toISOString();
       }
       const { error } = await supabase.from('tasks').update(updates).eq('id', task.id);
       if (error) throw error;
@@ -76,7 +76,7 @@ export function TaskUnifiedModal({
           </DialogTitle>
           <DialogDescription className="text-[13px] text-muted-foreground">
             {isEdit
-              ? `${task.clientName || task.planningNotes || 'Tarefa Geral'} - ${format(new Date(task.taskDate), 'dd/MM/yyyy', { locale: ptBR })}`
+              ? `${task.title || task.clientName || 'Tarefa Geral'} - ${task.dueDate ? format(new Date(task.dueDate), 'dd/MM/yyyy', { locale: ptBR }) : 'Sem data'}`
               : 'Preencha os dados da tarefa'}
           </DialogDescription>
         </DialogHeader>
@@ -90,34 +90,36 @@ export function TaskUnifiedModal({
           )}
 
           <div>
-            <label className="text-[11px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">Titulo / Planejamento</label>
-            <Input value={planningNotes} onChange={e => setPlanningNotes(e.target.value)} placeholder="Notas de planejamento..." className="mt-1" />
+            <label className="text-[11px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">Titulo</label>
+            <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Titulo da tarefa..." className="mt-1" />
           </div>
 
           <div>
-            <label className="text-[11px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">Observacoes</label>
-            <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Observacoes..." className="mt-1" rows={3} />
+            <label className="text-[11px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">Descricao</label>
+            <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Descricao..." className="mt-1" rows={3} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-[11px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">Prioridade</label>
-              <Select value={priority} onValueChange={(v) => setPriority(v as 'alta' | 'media' | 'baixa')}>
+              <Select value={priority} onValueChange={(v) => setPriority(v as TaskData['priority'])}>
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="urgente">Urgente</SelectItem>
                   <SelectItem value="alta">Alta</SelectItem>
-                  <SelectItem value="media">Media</SelectItem>
+                  <SelectItem value="normal">Normal</SelectItem>
                   <SelectItem value="baixa">Baixa</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
               <label className="text-[11px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">Status</label>
-              <Select value={status} onValueChange={(v) => setStatus(v as 'pendente' | 'concluida')}>
+              <Select value={status} onValueChange={(v) => setStatus(v as TaskData['status'])}>
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pendente">Pendente</SelectItem>
-                  <SelectItem value="concluida">Concluida</SelectItem>
+                  <SelectItem value="open">Aberta</SelectItem>
+                  <SelectItem value="done">Concluida</SelectItem>
+                  <SelectItem value="cancelled">Cancelada</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -135,13 +137,6 @@ export function TaskUnifiedModal({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-          )}
-
-          {isEdit && (
-            <div className="flex gap-2 text-[11px] text-muted-foreground">
-              {task.taskCategory && <span className="bg-muted px-2 py-0.5 rounded text-[10px]">{task.taskCategory}</span>}
-              {task.contactType && <span className="bg-muted px-2 py-0.5 rounded text-[10px]">{task.contactType}</span>}
             </div>
           )}
         </div>

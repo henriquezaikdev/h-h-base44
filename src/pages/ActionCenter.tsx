@@ -52,7 +52,7 @@ export default function ActionCenter() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { seller, role, isLoading: authLoading } = useAuth()
   const { sellers } = useSellersData()
-  const { tasks } = useTasksData(undefined, seller?.id)
+  const { tasks } = useTasksData(undefined, seller?.id, role)
 
   const isOwner = role === 'owner'
   const isAdmin = role === 'admin'
@@ -194,8 +194,8 @@ export default function ActionCenter() {
   ]
 
   const today = startOfDay(new Date())
-  const pendingTasks = (tasks ?? []).filter((t) => t.status !== 'concluida')
-  const overdueTasks = pendingTasks.filter((t) => isBefore(new Date(t.taskDate), today))
+  const pendingTasks = (tasks ?? []).filter((t) => t.status === 'open')
+  const overdueTasks = pendingTasks.filter((t) => t.dueDate && isBefore(new Date(t.dueDate), today))
 
   return (
     <MeuDiaErrorBoundary>

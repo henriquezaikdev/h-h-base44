@@ -17,7 +17,6 @@ interface TabDef {
   badge?: number
 }
 
-// Error Boundary for tabs
 class TasksErrorBoundary extends React.Component<
   { children: React.ReactNode },
   { hasError: boolean }
@@ -46,14 +45,14 @@ export function OwnerMeuDia({
 }: {
   renderVendasTab: () => React.ReactNode
 }) {
-  const { seller } = useAuth()
+  const { seller, role } = useAuth()
   const { sellers, loading: sellersLoading } = useSellersData()
-  const { tasks, loading: tasksLoading } = useTasksData(undefined, seller?.id)
+  const { tasks, loading: tasksLoading } = useTasksData(undefined, seller?.id, role)
   const [activeTab, setActiveTab] = useState<OwnerTab>('vendas')
 
   const today = startOfDay(new Date())
-  const pendingTasks = (tasks || []).filter(t => t.status !== 'concluida')
-  const overdueTasks = pendingTasks.filter(t => isBefore(new Date(t.taskDate), today))
+  const openTasks = (tasks || []).filter(t => t.status === 'open')
+  const overdueTasks = openTasks.filter(t => t.dueDate && isBefore(new Date(t.dueDate), today))
 
   const tabBadge = (tab: OwnerTab) => {
     if (tab === 'tarefas' && overdueTasks.length > 0) return overdueTasks.length

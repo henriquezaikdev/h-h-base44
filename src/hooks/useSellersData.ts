@@ -19,6 +19,7 @@ export function useSellersData() {
       const { data, error } = await supabase
         .from('sellers')
         .select('*')
+        .eq('active', true)
         .order('name');
 
       if (error) {
@@ -26,6 +27,7 @@ export function useSellersData() {
         throw error;
       }
 
+      console.log(`[useSellersData] Retornou ${(data || []).length} sellers`);
       return data || [];
     },
     staleTime: 1000 * 60 * 5,

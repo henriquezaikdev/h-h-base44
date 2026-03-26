@@ -28,8 +28,6 @@ interface UserWithStatus {
   avatar_url: string | null;
   statuses: Status[];
   hasActive: boolean;
-  level: number;
-  xp_total: number;
 }
 
 export function ProfileStoriesBar() {
@@ -55,7 +53,7 @@ export function ProfileStoriesBar() {
 
     const [statusRes, sellersRes] = await Promise.all([
       supabase.from('hh_mural_status').select('*').gte('expires_at', now).order('created_at', { ascending: false }),
-      supabase.from('sellers').select('id, name, avatar_url, level, xp_total').eq('status', 'ATIVO').order('name'),
+      supabase.from('sellers').select('id, name, avatar_url').order('name'),
     ]);
 
     const statuses = statusRes.data || [];
@@ -70,22 +68,19 @@ export function ProfileStoriesBar() {
     const result: UserWithStatus[] = [];
 
     if (seller) {
-      const sellerData = allSellers.find((s: { id: string }) => s.id === seller.id);
       result.push({
         id: seller.id,
         name: seller.name,
         avatar_url: seller.avatar_url || null,
         statuses: grouped[seller.id] || [],
         hasActive: !!(grouped[seller.id]?.length),
-        level: sellerData?.level || 1,
-        xp_total: sellerData?.xp_total || 0,
       });
     }
 
     const withStatus: UserWithStatus[] = [];
     const withoutStatus: UserWithStatus[] = [];
 
-    allSellers.forEach((s: { id: string; name: string; avatar_url: string | null; level: number; xp_total: number }) => {
+    allSellers.forEach((s: { id: any; name: any; avatar_url: any }) => {
       if (s.id === seller?.id) return;
       const userStatuses = grouped[s.id] || [];
       const entry: UserWithStatus = {
@@ -94,8 +89,6 @@ export function ProfileStoriesBar() {
         avatar_url: s.avatar_url || null,
         statuses: userStatuses,
         hasActive: userStatuses.length > 0,
-        level: s.level || 1,
-        xp_total: s.xp_total || 0,
       };
       if (userStatuses.length > 0) withStatus.push(entry);
       else withoutStatus.push(entry);
@@ -221,7 +214,6 @@ export function ProfileStoriesBar() {
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="text-xs">
                   <p className="font-semibold">{user.name}</p>
-                  <p className="text-muted-foreground">Nivel {user.level} - {user.xp_total.toLocaleString('pt-BR')} XP</p>
                   {user.hasActive && <p className="text-primary">Status ativo</p>}
                 </TooltipContent>
               </Tooltip>

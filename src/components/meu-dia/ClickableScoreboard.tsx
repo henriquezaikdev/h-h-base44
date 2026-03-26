@@ -5,21 +5,25 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { cn } from '@/lib/utils';
 
 export interface SellerMetricsCalculated {
-  actualCallsToday: number;
-  actualWhatsappToday: number;
-  actualContactsToday: number;
-  actualSalesToday: number;
-  metaCallsToday: number;
-  metaWhatsappToday: number;
-  metaContactsToday: number;
-  remainingCallsMonth: number;
-  remainingWhatsappMonth: number;
-  remainingContactsMonth: number;
-  remainingSalesMonth: number;
-  neededCallsPerDayFromNow: number;
-  neededWhatsappPerDayFromNow: number;
-  neededContactsPerDayFromNow: number;
-  neededSalesPerDayFromNow: number;
+  salesMonth?: number;
+  ordersMonth?: number;
+  tasksCompletedMonth?: number;
+  tasksOpenCount?: number;
+  actualCallsToday?: number;
+  actualWhatsappToday?: number;
+  actualContactsToday?: number;
+  actualSalesToday?: number;
+  metaCallsToday?: number;
+  metaWhatsappToday?: number;
+  metaContactsToday?: number;
+  remainingCallsMonth?: number;
+  remainingWhatsappMonth?: number;
+  remainingContactsMonth?: number;
+  remainingSalesMonth?: number;
+  neededCallsPerDayFromNow?: number;
+  neededWhatsappPerDayFromNow?: number;
+  neededContactsPerDayFromNow?: number;
+  neededSalesPerDayFromNow?: number;
   workingDays?: number;
   elapsedWorkdays?: number;
   remainingWorkdays?: number;
@@ -87,19 +91,19 @@ export function ClickableScoreboard({
   }
 
   const {
-    actualCallsToday,
-    actualWhatsappToday,
-    actualContactsToday,
-    actualSalesToday,
-    metaCallsToday,
-    metaWhatsappToday,
-    metaContactsToday,
-    remainingCallsMonth,
-    remainingWhatsappMonth,
-    neededCallsPerDayFromNow,
-    neededWhatsappPerDayFromNow,
-    neededSalesPerDayFromNow,
-    remainingSalesMonth,
+    actualCallsToday = 0,
+    actualWhatsappToday = 0,
+    actualContactsToday = 0,
+    actualSalesToday = 0,
+    metaCallsToday = 0,
+    metaWhatsappToday = 0,
+    metaContactsToday = 0,
+    remainingCallsMonth = 0,
+    remainingWhatsappMonth = 0,
+    neededCallsPerDayFromNow = 0,
+    neededWhatsappPerDayFromNow = 0,
+    neededSalesPerDayFromNow = 0,
+    remainingSalesMonth = 0,
     remainingWorkdays = 1,
   } = metrics;
 

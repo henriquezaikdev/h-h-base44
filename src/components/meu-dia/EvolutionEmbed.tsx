@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Bird, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
@@ -33,10 +33,15 @@ export function EvolutionEmbed() {
   const isCurrentMonth = selectedMonth === new Date().getMonth() + 1 && selectedYear === new Date().getFullYear();
 
   const {
-    level, errors, dailyActivities, salesByMargin,
-    currentMonthSales, currentMonthCalls, currentMonthWhatsapp,
-    workDaysInMonth, workDaysPassed, previousMonthMet: _previousMonthMet,
-    loading, refetch: _refetch,
+    dailyActivities,
+    currentMonthSales,
+    currentMonthOrderCount,
+    currentMonthTasksCompleted,
+    currentMonthTasksOpen,
+    workDaysInMonth,
+    workDaysPassed,
+    previousMonthSales,
+    loading,
   } = useEvolutionData(selectedSellerId, selectedMonth, selectedYear);
 
   const handlePreviousMonth = () => setSelectedDate(prev => subMonths(prev, 1));
@@ -50,8 +55,6 @@ export function EvolutionEmbed() {
       const { data } = await supabase
         .from('sellers')
         .select('id, name, role')
-        .eq('role', 'vendedor')
-        .or('status.eq.ATIVO,status.is.null')
         .order('name');
 
       if (data) {
@@ -70,42 +73,7 @@ export function EvolutionEmbed() {
 
   const selectedSeller = sellers.find(s => s.id === selectedSellerId);
 
-  const alerts = useMemo(() => {
-    if (!level) return [];
-    const alertList: { id: string; type: string; title: string; description: string; action?: string }[] = [];
-    const today = new Date();
-    const todayStr = format(today, 'yyyy-MM-dd');
-    const emptyDays = dailyActivities.filter(d => d.date <= todayStr && d.total === 0).length;
-    if (emptyDays >= 3) {
-      alertList.push({ id: 'critical-productivity', type: 'danger', title: 'Execucao Critica', description: `${emptyDays} dias sem atividade registrada`, action: 'Bloqueia qualquer beneficio' });
-    } else if (emptyDays >= 1) {
-      alertList.push({ id: 'empty-days-warning', type: 'warning', title: 'Dias Vazios', description: `${emptyDays} dia(s) sem atividade registrada`, action: 'Dias sem atividade contam como falha' });
-    }
-    if (errors.length === 3) {
-      alertList.push({ id: 'error-warning', type: 'warning', title: 'Erro Proximo do Limite', description: '3 erros registrados. O proximo bloqueia a premiacao.' });
-    }
-    if (errors.length >= 4) {
-      alertList.push({ id: 'error-blocked', type: 'danger', title: 'Premiacao Bloqueada', description: `${errors.length} erros este mes. Premiacao perdida.` });
-    }
-    const salesProgress = (currentMonthSales / (level.monthly_sales_target || 30000)) * 100;
-    const expectedProgress = (workDaysPassed / workDaysInMonth) * 100;
-    if (salesProgress < expectedProgress * 0.7 && workDaysPassed > 5) {
-      alertList.push({ id: 'sales-behind', type: 'warning', title: 'Vendas Abaixo do Esperado', description: `${salesProgress.toFixed(0)}% da meta com ${expectedProgress.toFixed(0)}% do mes`, action: 'Risco de perder sequencia' });
-    }
-    return alertList;
-  }, [level, errors, dailyActivities, currentMonthSales, workDaysPassed, workDaysInMonth]);
-
-  const evolutionStatus = useMemo(() => {
-    if (!level) return 'stable' as const;
-    if (level.consecutive_months_met > 0) return 'rising' as const;
-    if (level.consecutive_months_missed > 0) return 'falling' as const;
-    return 'stable' as const;
-  }, [level]);
-
-  const monthsToPromotion = level ? Math.max(0, 2 - level.consecutive_months_met) : 2;
-  const monthsToDemotion = level ? Math.max(0, 2 - level.consecutive_months_missed) : 2;
-
-  if (loading && !level) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[40vh]">
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center gap-4">
@@ -120,17 +88,15 @@ export function EvolutionEmbed() {
 
   return (
     <div className="space-y-6">
-      {/* Header with seller selector and month navigation */}
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h2 className="text-lg font-semibold text-foreground">
             Evolucao {selectedSeller ? `- ${selectedSeller.name}` : ''}
           </h2>
-          {level && (
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Nivel: {level.current_level.toUpperCase()} - Meta: R$ {(level.monthly_sales_target || 30000).toLocaleString('pt-BR')}
-            </p>
-          )}
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {currentMonthOrderCount} pedidos | R$ {currentMonthSales.toLocaleString('pt-BR')} em vendas
+          </p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -168,64 +134,45 @@ export function EvolutionEmbed() {
         </div>
       </div>
 
-      {!level ? (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center py-16 bg-primary/5 rounded-2xl border border-dashed border-primary/20"
-        >
-          <motion.div initial={{ scale: 0.5 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 200 }} className="w-20 h-20 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-            <Bird className="h-10 w-10 text-primary/50" />
-          </motion.div>
-          <h3 className="text-lg font-medium mb-2">Vendedor nao configurado</h3>
-          <p className="text-muted-foreground text-sm mb-4 max-w-md mx-auto">Configure o nivel e metas deste vendedor em Configuracoes.</p>
-        </motion.div>
-      ) : (
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="h-10">
-            <TabsTrigger value="performance" className="text-sm">Performance</TabsTrigger>
-            <TabsTrigger value="commission" className="text-sm">Comissao & Nivel</TabsTrigger>
-            <TabsTrigger value="campaigns" className="text-sm">Campanhas</TabsTrigger>
-            <TabsTrigger value="rules" className="text-sm">Regras</TabsTrigger>
-          </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="h-10">
+          <TabsTrigger value="performance" className="text-sm">Performance</TabsTrigger>
+          <TabsTrigger value="commission" className="text-sm">Comissao & Nivel</TabsTrigger>
+          <TabsTrigger value="campaigns" className="text-sm">Campanhas</TabsTrigger>
+          <TabsTrigger value="rules" className="text-sm">Regras</TabsTrigger>
+        </TabsList>
 
-          <TabsContent value="performance" className="mt-6">
-            <PerformanceTab
-              level={level}
-              currentMonthSales={currentMonthSales}
-              currentMonthCalls={currentMonthCalls}
-              currentMonthWhatsapp={currentMonthWhatsapp}
-              workDaysInMonth={workDaysInMonth}
-              workDaysPassed={workDaysPassed}
-              dailyActivities={dailyActivities}
-              alerts={alerts}
-              evolutionStatus={evolutionStatus}
-              monthsToPromotion={monthsToPromotion}
-              monthsToDemotion={monthsToDemotion}
-            />
-          </TabsContent>
+        <TabsContent value="performance" className="mt-6">
+          <PerformanceTab
+            currentMonthSales={currentMonthSales}
+            currentMonthOrderCount={currentMonthOrderCount}
+            currentMonthTasksCompleted={currentMonthTasksCompleted}
+            currentMonthTasksOpen={currentMonthTasksOpen}
+            workDaysInMonth={workDaysInMonth}
+            workDaysPassed={workDaysPassed}
+            dailyActivities={dailyActivities}
+            previousMonthSales={previousMonthSales}
+          />
+        </TabsContent>
 
-          <TabsContent value="commission" className="mt-6">
-            <ComissaoNivelTab
-              level={level}
-              errors={errors}
-              salesByMargin={salesByMargin}
-              currentMonthSales={currentMonthSales}
-            />
-          </TabsContent>
+        <TabsContent value="commission" className="mt-6">
+          <ComissaoNivelTab
+            currentMonthSales={currentMonthSales}
+            currentMonthOrderCount={currentMonthOrderCount}
+          />
+        </TabsContent>
 
-          <TabsContent value="campaigns" className="mt-6">
-            <div className="text-center py-12 bg-muted/20 rounded-2xl border border-dashed border-border">
-              <p className="text-muted-foreground text-sm">Campanhas em breve</p>
-              <p className="text-xs text-muted-foreground mt-1">Modulo de campanhas de incentivo sera adicionado aqui.</p>
-            </div>
-          </TabsContent>
+        <TabsContent value="campaigns" className="mt-6">
+          <div className="text-center py-12 bg-muted/20 rounded-2xl border border-dashed border-border">
+            <p className="text-muted-foreground text-sm">Campanhas em breve</p>
+            <p className="text-xs text-muted-foreground mt-1">Modulo de campanhas de incentivo sera adicionado aqui.</p>
+          </div>
+        </TabsContent>
 
-          <TabsContent value="rules" className="mt-6">
-            <RegrasTab />
-          </TabsContent>
-        </Tabs>
-      )}
+        <TabsContent value="rules" className="mt-6">
+          <RegrasTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

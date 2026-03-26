@@ -248,7 +248,7 @@ function AbaPerfil({
 }) {
   const [postText, setPostText] = useState('')
 
-  const completedCount = allTasks.filter(t => t.status === 'completed').length
+  const completedCount = allTasks.filter(t => t.status === 'done').length
   const totalCount     = allTasks.filter(t => t.status !== 'cancelled').length
   const xp             = completedCount * 10
   const level          = Math.floor(xp / 500) + 1
@@ -359,7 +359,7 @@ function AbaEvolucao({
   )
   const ordersMonth = orders.filter(o => o.created_at.slice(0, 10) >= start && o.created_at.slice(0, 10) <= end)
 
-  const completed      = myTasksMonth.filter(t => t.status === 'completed').length
+  const completed      = myTasksMonth.filter(t => t.status === 'done').length
   const total          = myTasksMonth.length
   const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0
   const totalSales     = ordersMonth.reduce((s, o) => s + (o.total ?? 0), 0)
@@ -519,7 +519,7 @@ function AbaVendas({
 
   const callsDone  = 0
   const waDone     = 0
-  const totalDone  = myTasks.filter(t => t.status === 'completed' && t.done_at?.slice(0, 10) === today).length
+  const totalDone  = myTasks.filter(t => t.status === 'done' && t.done_at?.slice(0, 10) === today).length
 
   const quotesFiltered = useMemo(() => {
     const q = search.toLowerCase().trim()
@@ -818,7 +818,7 @@ function AbaEquipe({
       ...s,
       open:    st.filter(t => t.status === 'open').length,
       overdue: st.filter(t => t.status === 'open' && t.due_date && t.due_date < today).length,
-      done:    st.filter(t => t.status === 'completed').length,
+      done:    st.filter(t => t.status === 'done').length,
     }
   })
 
@@ -980,7 +980,7 @@ function OwnerDashboard({ seller }: { seller: Seller }) {
   const clients = rawClients ?? []
 
   async function completeTask(id: string) {
-    await supabase.from('tasks').update({ status: 'completed', done_at: new Date().toISOString() }).eq('id', id)
+    await supabase.from('tasks').update({ status: 'done', done_at: new Date().toISOString() }).eq('id', id)
     refetchTasks()
   }
 
@@ -1082,7 +1082,7 @@ function SellerDashboard({ seller }: { seller: Seller }) {
   const clients = rawClients ?? []
 
   async function completeTask(id: string) {
-    await supabase.from('tasks').update({ status: 'completed', done_at: new Date().toISOString() }).eq('id', id)
+    await supabase.from('tasks').update({ status: 'done', done_at: new Date().toISOString() }).eq('id', id)
     refetchTasks()
   }
 
@@ -1167,7 +1167,7 @@ function FinanceiroDashboard({ seller }: { seller: Seller }) {
   const next7  = isoDate(new Date(Date.now() + 7 * 86_400_000))
 
   async function completeTask(id: string) {
-    await supabase.from('tasks').update({ status: 'completed', done_at: new Date().toISOString() }).eq('id', id)
+    await supabase.from('tasks').update({ status: 'done', done_at: new Date().toISOString() }).eq('id', id)
     refetchTasks()
   }
 
@@ -1363,13 +1363,13 @@ function LogisticaDashboard({ seller }: { seller: Seller }) {
   const today = isoDate()
 
   async function completeTask(id: string) {
-    await supabase.from('tasks').update({ status: 'completed', done_at: new Date().toISOString() }).eq('id', id)
+    await supabase.from('tasks').update({ status: 'done', done_at: new Date().toISOString() }).eq('id', id)
     refetchTasks()
   }
 
   async function toggleRoutine(task: Task) {
-    const newStatus = task.status === 'completed' ? 'open' : 'completed'
-    await supabase.from('tasks').update({ status: newStatus, done_at: newStatus === 'completed' ? new Date().toISOString() : null }).eq('id', task.id)
+    const newStatus = task.status === 'done' ? 'open' : 'done'
+    await supabase.from('tasks').update({ status: newStatus, done_at: newStatus === 'done' ? new Date().toISOString() : null }).eq('id', task.id)
     refetchTasks()
   }
 
@@ -1438,11 +1438,11 @@ function LogisticaDashboard({ seller }: { seller: Seller }) {
                 <div key={t.id} className="flex items-center gap-3 px-4 py-3 border-b border-[#F3F4F6] hover:bg-[#F9FAFB] transition-colors">
                   <button
                     onClick={() => toggleRoutine(t)}
-                    className={`w-9 h-5 rounded-full transition-colors shrink-0 relative ${t.status === 'completed' ? 'bg-primary' : 'bg-[#D1D5DB]'}`}
+                    className={`w-9 h-5 rounded-full transition-colors shrink-0 relative ${t.status === 'done' ? 'bg-primary' : 'bg-[#D1D5DB]'}`}
                   >
-                    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${t.status === 'completed' ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${t.status === 'done' ? 'translate-x-4' : 'translate-x-0.5'}`} />
                   </button>
-                  <p className={`text-sm flex-1 ${t.status === 'completed' ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                  <p className={`text-sm flex-1 ${t.status === 'done' ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
                     {t.title}
                   </p>
                   <PriorityBadge priority={t.priority} />
@@ -1489,12 +1489,12 @@ function LogisticaDashboard({ seller }: { seller: Seller }) {
                         <td>{t.clients?.name ?? '—'}</td>
                         <td><PriorityBadge priority={t.priority} /></td>
                         <td>
-                          <span className={`hh-badge ${t.status === 'completed' ? 'hh-badge-success' : 'hh-badge-warning'}`}>
-                            {t.status === 'completed' ? 'Entregue' : 'Pendente'}
+                          <span className={`hh-badge ${t.status === 'done' ? 'hh-badge-success' : 'hh-badge-warning'}`}>
+                            {t.status === 'done' ? 'Entregue' : 'Pendente'}
                           </span>
                         </td>
                         <td className="text-center">
-                          {t.status !== 'completed' && (
+                          {t.status !== 'done' && (
                             <button
                               onClick={() => completeTask(t.id)}
                               className="btn-primary text-xs px-2.5 py-1"

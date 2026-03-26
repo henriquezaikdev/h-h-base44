@@ -17,7 +17,7 @@ import { OpenQuotesCard } from '@/components/meu-dia/OpenQuotesCard';
 import { PriorityQueueSection } from '@/components/meu-dia/PriorityQueueSection';
 import { DailyFocusBlock } from '@/components/meu-dia/DailyFocusBlock';
 import { CriticalBlockerModal } from '@/components/meu-dia/CriticalBlockerModal';
-import { AlertTriangle, Clock, CalendarCheck, Settings2, Users } from 'lucide-react';
+import { AlertTriangle, Clock, CalendarCheck, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { isToday, isPast, parseISO, isFuture } from 'date-fns';
 
@@ -60,7 +60,7 @@ export function ActionCenterVendedor({
     return combined;
   }, [baseAlerts]);
 
-  const { workMonthConfig, isConfigured, sellerMetrics, refetch: refetchTargets } = useWorkingDaysTargets(effectiveSellerId);
+  const { workMonthConfig, isConfigured, sellerMetrics, aggregated, refetch: refetchTargets } = useWorkingDaysTargets(effectiveSellerId);
   const { tasks, refetch: refetchTasks } = useTasksData(undefined, effectiveSellerId);
   const { hasCriticalBlock, criticalTasks, snooze } = useCriticalBlocker();
   const { focusItems, focusTaskIds, addFocus, removeFocus, suggestFocus, refetch: refetchFocus } = useDailyFocus();
@@ -76,11 +76,10 @@ export function ActionCenterVendedor({
 
   const pendingForSeller = useMemo(() =>
     tasks.filter(t => {
-      if (t.status !== 'pendente') return false;
-      if (t.createdByTrigger || t.sourceModule) return false;
+      if (t.status !== 'open') return false;
       if (!t.clientId && !t.clientName) return false;
       if (effectiveSellerId) {
-        return t.clientSellerId === effectiveSellerId || t.assignedToSellerId === effectiveSellerId || t.createdBySellerId === effectiveSellerId;
+        return t.clientSellerId === effectiveSellerId || t.assignedTo === effectiveSellerId;
       }
       return true;
     }),
@@ -88,92 +87,52 @@ export function ActionCenterVendedor({
   );
   const focusSuggestions = useMemo(() => suggestFocus(pendingForSeller), [pendingForSeller, suggestFocus, focusItems]);
 
-  const { aggregated } = useWorkingDaysTargets(effectiveSellerId);
+  const currentMetrics = useMemo(() => ({
+    salesMonth: sellerMetrics?.salesMonth || aggregated.totalSalesMonth,
+    ordersMonth: sellerMetrics?.ordersMonth || aggregated.totalOrdersMonth,
+    tasksCompletedMonth: sellerMetrics?.tasksCompletedMonth || aggregated.totalTasksCompleted,
+    tasksOpenCount: sellerMetrics?.tasksOpenCount || aggregated.totalTasksOpen,
+    workingDays: workMonthConfig?.workingDays || 22,
+  }), [sellerMetrics, aggregated, workMonthConfig]);
 
-  const currentMetrics = useMemo(() => {
-    if (effectiveSellerId && sellerMetrics.has(effectiveSellerId)) {
-      return sellerMetrics.get(effectiveSellerId)!;
-    }
-    if (!effectiveSellerId) {
-      return {
-        actualCallsToday: aggregated.actualCallsTodayAll,
-        actualWhatsappToday: aggregated.actualWhatsappTodayAll,
-        actualContactsToday: aggregated.actualContactsTodayAll,
-        actualSalesToday: aggregated.actualSalesTodayAll,
-        metaCallsToday: aggregated.metaCallsTodayAll,
-        metaWhatsappToday: aggregated.metaWhatsappTodayAll,
-        metaContactsToday: aggregated.metaContactsTodayAll,
-        remainingCallsMonth: aggregated.remainingCallsMonthAll,
-        remainingWhatsappMonth: aggregated.remainingWhatsappMonthAll,
-        remainingContactsMonth: aggregated.remainingContactsMonthAll,
-        remainingSalesMonth: aggregated.remainingSalesMonthAll,
-        neededCallsPerDayFromNow: 0,
-        neededWhatsappPerDayFromNow: 0,
-        neededContactsPerDayFromNow: 0,
-        neededSalesPerDayFromNow: 0,
-        workingDays: workMonthConfig?.workingDays || 22,
-        elapsedWorkdays: 0,
-        remainingWorkdays: 1,
-      };
-    }
-    return {
-      actualCallsToday: 0, actualWhatsappToday: 0, actualContactsToday: 0, actualSalesToday: 0,
-      metaCallsToday: 36, metaWhatsappToday: 18, metaContactsToday: 36,
-      remainingCallsMonth: 0, remainingWhatsappMonth: 0, remainingContactsMonth: 0, remainingSalesMonth: 0,
-      neededCallsPerDayFromNow: 0, neededWhatsappPerDayFromNow: 0, neededContactsPerDayFromNow: 0, neededSalesPerDayFromNow: 0,
-      workingDays: workMonthConfig?.workingDays || 22, elapsedWorkdays: 0, remainingWorkdays: 1,
-    };
-  }, [effectiveSellerId, sellerMetrics, workMonthConfig, aggregated]);
-
-  const { overdueTasks, todayTasks, upcomingTasks, delegatedTasks } = useMemo(() => {
+  const { overdueTasks, todayTasks, upcomingTasks } = useMemo(() => {
     const searchLower = searchTerm.toLowerCase().trim();
     const pending = tasks
-      .filter(t => t.status === 'pendente')
-      .filter(t => !t.createdByTrigger && !t.sourceModule)
+      .filter(t => t.status === 'open')
       .filter(t => t.clientId || t.clientName)
-      .filter(t => (effectiveSellerId ? (t.createdBySellerId === effectiveSellerId || t.assignedToSellerId === effectiveSellerId) : true))
-      .filter(t => { if (!contactFilter) return true; return t.contactType === contactFilter; })
+      .filter(t => (effectiveSellerId ? (t.assignedTo === effectiveSellerId) : true))
       .filter(t => { if (!searchLower) return true; return t.clientName.toLowerCase().includes(searchLower); });
 
-    const isDelegatedToMe = (t: TaskData) =>
-      effectiveSellerId && t.assignedToSellerId === effectiveSellerId && t.createdBySellerId !== effectiveSellerId;
-
-    const delegated: TaskData[] = [];
     const overdue: TaskData[] = [];
     const today: TaskData[] = [];
     const upcoming: TaskData[] = [];
 
     pending.forEach(task => {
-      if (isDelegatedToMe(task)) { delegated.push(task); return; }
-      const taskDate = parseISO(task.taskDate);
+      if (!task.dueDate) { today.push(task); return; }
+      const taskDate = parseISO(task.dueDate);
       if (isPast(taskDate) && !isToday(taskDate)) overdue.push(task);
       else if (isToday(taskDate)) today.push(task);
       else if (isFuture(taskDate)) upcoming.push(task);
     });
 
-    // Also include completed delegated tasks awaiting manager confirmation
-    const completedDelegated = tasks
-      .filter(t => t.status === 'concluida' && !t.managerConfirmedAt && isDelegatedToMe(t))
-      .filter(t => { if (!searchLower) return true; return t.clientName.toLowerCase().includes(searchLower); });
-    delegated.push(...completedDelegated);
-
     const sortTasks = (a: TaskData, b: TaskData) => {
-      const priorityOrder = { alta: 0, media: 1, baixa: 2 };
-      const aPrio = priorityOrder[a.priority] ?? 1;
-      const bPrio = priorityOrder[b.priority] ?? 1;
+      const priorityOrder: Record<string, number> = { alta: 0, urgente: 1, normal: 2, baixa: 3 };
+      const aPrio = priorityOrder[a.priority] ?? 2;
+      const bPrio = priorityOrder[b.priority] ?? 2;
       if (aPrio !== bPrio) return aPrio - bPrio;
-      return parseISO(a.taskDate).getTime() - parseISO(b.taskDate).getTime();
+      const aDate = a.dueDate ? parseISO(a.dueDate).getTime() : 0;
+      const bDate = b.dueDate ? parseISO(b.dueDate).getTime() : 0;
+      return aDate - bDate;
     };
 
     return {
       overdueTasks: overdue.sort(sortTasks),
       todayTasks: today.sort(sortTasks),
       upcomingTasks: upcoming.sort(sortTasks),
-      delegatedTasks: delegated.sort(sortTasks),
     };
-  }, [tasks, effectiveSellerId, contactFilter, searchTerm]);
+  }, [tasks, effectiveSellerId, searchTerm]);
 
-  const totalPending = overdueTasks.length + todayTasks.length + upcomingTasks.length + delegatedTasks.length;
+  const totalPending = overdueTasks.length + todayTasks.length + upcomingTasks.length;
 
   const toggleTask = (taskId: string) => {
     setSelectedTasks(prev => {
@@ -190,6 +149,7 @@ export function ActionCenterVendedor({
   void deletingTask;
   void alerts;
   void debugEnabled;
+  void contactFilter;
 
   return (
     <>
@@ -316,26 +276,6 @@ export function ActionCenterVendedor({
           }
         />
       </div>
-
-      {delegatedTasks.length > 0 && (
-        <div>
-          <TaskPrioritySection
-            title="Delegadas para mim"
-            subtitle={`${delegatedTasks.length} tarefa${delegatedTasks.length !== 1 ? 's' : ''} delegada${delegatedTasks.length !== 1 ? 's' : ''}`}
-            icon={<Users className="h-5 w-5 text-primary" />}
-            tasks={delegatedTasks}
-            variant="upcoming"
-            selectedTasks={selectedTasks}
-            onToggleTask={toggleTask}
-            onComplete={handleTaskClick}
-            onTaskClick={handleTaskClick}
-            onDeleteTask={isOwner ? _handleDeleteTask : undefined}
-            isAdmin={isAdminOrOwner}
-            isOwner={isOwner}
-            emptyState={null}
-          />
-        </div>
-      )}
 
       {totalPending === 0 && (
         <EmptyStateCard
