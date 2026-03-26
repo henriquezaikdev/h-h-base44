@@ -194,8 +194,8 @@ export default function ActionCenter() {
   ]
 
   const today = startOfDay(new Date())
-  const pendingTasks = (tasks ?? []).filter((t) => t.status === 'open')
-  const overdueTasks = pendingTasks.filter((t) => t.dueDate && isBefore(new Date(t.dueDate), today))
+  const pendingTasks = (tasks ?? []).filter((t) => t.status === 'pendente')
+  const overdueTasks = pendingTasks.filter((t) => t.taskDate && isBefore(new Date(t.taskDate), today))
 
   return (
     <MeuDiaErrorBoundary>

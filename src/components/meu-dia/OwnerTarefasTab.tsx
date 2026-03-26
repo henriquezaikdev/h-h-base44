@@ -44,41 +44,44 @@ export function OwnerTarefasTab({ sellers }: { sellers: SellerRow[] }) {
   const { tasks, loading } = useTasksData(undefined, seller?.id, role);
   const queryClient = useQueryClient();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({ alta: true, normal: true, baixa: false });
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({ alta: true, media: true, baixa: false });
   const [delegatePrefill] = useState('');
   const [editingTask, setEditingTask] = useState<TaskData | null>(null);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
 
   const today = startOfDay(new Date());
 
-  // My tasks: open tasks assigned to me OR without assignee (owner sees unassigned too)
+  // Owner vê TODAS as tarefas pendentes da empresa
   const myTasks = useMemo(() =>
-    (tasks || []).filter(t => t.status === 'open' && t.assignedTo === seller?.id),
-    [tasks, seller?.id]
+    (tasks || []).filter(t => t.status === 'pendente'),
+    [tasks]
   );
 
-  // Delegated: open tasks assigned to other sellers
+  // Delegadas: pendentes atribuídas a outros sellers
   const delegatedByMe = useMemo(() =>
     (tasks || []).filter(t =>
-      t.assignedTo && t.assignedTo !== seller?.id && t.status === 'open'),
+      t.assignedToSellerId &&
+      t.assignedToSellerId !== seller?.id &&
+      t.status === 'pendente'
+    ),
     [tasks, seller?.id]
   );
 
   const dueToday = useMemo(() =>
-    myTasks.filter(t => t.dueDate && isToday(new Date(t.dueDate))).length,
+    myTasks.filter(t => t.taskDate && isToday(new Date(t.taskDate))).length,
     [myTasks]
   );
 
   const overdue = useMemo(() =>
-    myTasks.filter(t => t.dueDate && isBefore(new Date(t.dueDate), today)).length,
+    myTasks.filter(t => t.taskDate && isBefore(new Date(t.taskDate), today)).length,
     [myTasks, today]
   );
 
   const groupByPriority = (list: TaskData[]) => {
-    const grouped: Record<string, TaskData[]> = { urgente: [], alta: [], normal: [], baixa: [] };
+    const grouped: Record<string, TaskData[]> = { urgente: [], alta: [], media: [], baixa: [] };
     list.forEach(t => {
       if (grouped[t.priority]) grouped[t.priority].push(t);
-      else grouped['normal'].push(t);
+      else grouped['media'].push(t);
     });
     return grouped;
   };
@@ -93,7 +96,7 @@ export function OwnerTarefasTab({ sellers }: { sellers: SellerRow[] }) {
   const delegatedGrouped = useMemo(() => {
     const g: Record<string, TaskData[]> = {};
     delegatedByMe.forEach(t => {
-      const key = t.assignedTo || 'unknown';
+      const key = t.assignedToSellerId || 'unknown';
       if (!g[key]) g[key] = [];
       g[key].push(t);
     });
@@ -102,14 +105,14 @@ export function OwnerTarefasTab({ sellers }: { sellers: SellerRow[] }) {
 
   const completeTask = async (taskId: string) => {
     await supabase.from('tasks').update({
-      status: 'done',
-      done_at: new Date().toISOString(),
-    }).eq('id', taskId);
+      status_crm: 'concluida',
+      completed_at: new Date().toISOString(),
+    } as any).eq('id', taskId);
     queryClient.invalidateQueries({ queryKey: ['tasks'] });
     toast.success('Tarefa concluida!');
   };
 
-  const priorityLabel: Record<string, string> = { urgente: 'Urgente', alta: 'Alta', normal: 'Normal', baixa: 'Baixa' };
+  const priorityLabel: Record<string, string> = { urgente: 'Urgente', alta: 'Alta', media: 'Media', baixa: 'Baixa' };
 
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
@@ -143,7 +146,7 @@ export function OwnerTarefasTab({ sellers }: { sellers: SellerRow[] }) {
           </div>
         ) : (
           <div className="space-y-3">
-            {(['urgente', 'alta', 'normal', 'baixa'] as const).map(p => {
+            {(['urgente', 'alta', 'media', 'baixa'] as const).map(p => {
               const items = grouped[p];
               if (!items?.length) return null;
               return (
@@ -158,17 +161,17 @@ export function OwnerTarefasTab({ sellers }: { sellers: SellerRow[] }) {
                       {items.map(t => (
                         <div key={t.id} className={cn(
                           "flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer hover:shadow-sm",
-                          t.dueDate && isBefore(new Date(t.dueDate), today) ? "border-destructive/20 bg-destructive/5" : "border-border bg-card"
+                          t.taskDate && isBefore(new Date(t.taskDate), today) ? "border-destructive/20 bg-destructive/5" : "border-border bg-card"
                         )} onClick={() => setEditingTask(t)}>
                           <div className="flex-1 min-w-0">
                             <p className="text-[13px] font-medium truncate text-foreground">{t.title || t.clientName || 'Tarefa Geral'}</p>
-                            {t.description && (
-                              <p className="text-[11px] text-muted-foreground truncate mt-0.5">{t.description}</p>
+                            {(t.planningNotes || t.notes) && (
+                              <p className="text-[11px] text-muted-foreground truncate mt-0.5">{t.planningNotes || t.notes}</p>
                             )}
                             <div className="flex items-center gap-2 mt-1">
-                              {t.dueDate && <span className="text-[11px] text-muted-foreground">{format(new Date(t.dueDate), 'dd/MM')}</span>}
-                              {t.assignedTo && sellerMap[t.assignedTo] && (
-                                <span className="text-[11px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{sellerMap[t.assignedTo]}</span>
+                              {t.taskDate && <span className="text-[11px] text-muted-foreground">{format(new Date(t.taskDate), 'dd/MM')}</span>}
+                              {t.assignedToSellerId && sellerMap[t.assignedToSellerId] && (
+                                <span className="text-[11px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{sellerMap[t.assignedToSellerId]}</span>
                               )}
                             </div>
                           </div>
@@ -202,7 +205,7 @@ export function OwnerTarefasTab({ sellers }: { sellers: SellerRow[] }) {
         ) : (
           <div className="space-y-4 mt-4">
             {Object.entries(delegatedGrouped).map(([sellerId, items]) => {
-              const hasOverdue = items.some(t => t.dueDate && isBefore(new Date(t.dueDate), today));
+              const hasOverdue = items.some(t => t.taskDate && isBefore(new Date(t.taskDate), today));
               return (
                 <div key={sellerId}>
                   <div className="flex items-center gap-2 mb-2">
@@ -216,20 +219,20 @@ export function OwnerTarefasTab({ sellers }: { sellers: SellerRow[] }) {
                     {items.map(t => (
                       <div key={t.id} className={cn(
                         "flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:ring-1 hover:ring-primary/30 transition-all",
-                        t.dueDate && isBefore(new Date(t.dueDate), today) ? "border-destructive/20 bg-destructive/5" : "border-border bg-card"
+                        t.taskDate && isBefore(new Date(t.taskDate), today) ? "border-destructive/20 bg-destructive/5" : "border-border bg-card"
                       )} onClick={() => setEditingTask(t)}>
                         <div className="flex-1 min-w-0">
                           <p className="text-[13px] truncate text-foreground">{t.title || t.clientName || 'Tarefa Geral'}</p>
-                          {t.dueDate && <span className="text-[11px] text-muted-foreground">{format(new Date(t.dueDate), 'dd/MM')}</span>}
+                          {t.taskDate && <span className="text-[11px] text-muted-foreground">{format(new Date(t.taskDate), 'dd/MM')}</span>}
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <span className={cn(
                             "text-[10px] px-1.5 py-0.5 rounded font-semibold border",
-                            t.dueDate && isBefore(new Date(t.dueDate), today)
+                            t.taskDate && isBefore(new Date(t.taskDate), today)
                               ? 'bg-destructive/10 text-destructive border-destructive/30'
                               : 'bg-muted text-muted-foreground border-border'
                           )}>
-                            {t.dueDate && isBefore(new Date(t.dueDate), today) ? 'Atrasada' : 'Pendente'}
+                            {t.taskDate && isBefore(new Date(t.taskDate), today) ? 'Atrasada' : 'Pendente'}
                           </span>
                           <Button size="sm" onClick={(e) => { e.stopPropagation(); completeTask(t.id); }} className="h-7 px-2 text-xs bg-primary hover:bg-primary/90 text-primary-foreground">
                             Concluir

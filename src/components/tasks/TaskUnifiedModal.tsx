@@ -33,9 +33,9 @@ export function TaskUnifiedModal({
   const [saving, setSaving] = useState(false);
   const [title, setTitle] = useState(task?.title || '');
   const [description, setDescription] = useState(task?.description || '');
-  const [priority, setPriority] = useState<TaskData['priority']>(task?.priority || 'normal');
-  const [assignedTo, setAssignedTo] = useState(task?.assignedTo || '__none__');
-  const [status, setStatus] = useState(task?.status || 'open');
+  const [priority, setPriority] = useState<TaskData['priority']>(task?.priority || 'media');
+  const [assignedTo, setAssignedTo] = useState(task?.assignedToSellerId || '__none__');
+  const [status, setStatus] = useState(task?.status || 'pendente');
 
   const isEdit = mode === 'edit' && task;
 
@@ -46,12 +46,12 @@ export function TaskUnifiedModal({
       const updates: Record<string, unknown> = {
         title: title || null,
         description: description || null,
-        priority,
-        assigned_to: assignedTo === '__none__' ? null : assignedTo,
-        status,
+        priority_crm: priority,
+        assigned_to_seller_id: assignedTo === '__none__' ? null : assignedTo,
+        status_crm: status,
       };
-      if (status === 'done' && task.status !== 'done') {
-        updates.done_at = new Date().toISOString();
+      if (status === 'concluida' && task.status !== 'concluida') {
+        updates.completed_at = new Date().toISOString();
       }
       const { error } = await supabase.from('tasks').update(updates).eq('id', task.id);
       if (error) throw error;
@@ -76,7 +76,7 @@ export function TaskUnifiedModal({
           </DialogTitle>
           <DialogDescription className="text-[13px] text-muted-foreground">
             {isEdit
-              ? `${task.title || task.clientName || 'Tarefa Geral'} - ${task.dueDate ? format(new Date(task.dueDate), 'dd/MM/yyyy', { locale: ptBR }) : 'Sem data'}`
+              ? `${task.title || task.clientName || 'Tarefa Geral'} - ${task.taskDate ? format(new Date(task.taskDate), 'dd/MM/yyyy', { locale: ptBR }) : 'Sem data'}`
               : 'Preencha os dados da tarefa'}
           </DialogDescription>
         </DialogHeader>

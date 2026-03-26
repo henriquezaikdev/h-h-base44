@@ -6,8 +6,9 @@ export interface SellerRow {
   name: string;
   email: string;
   role: string;
-  status?: string;
+  status?: string | null;
   department?: string | null;
+  is_sales_active?: boolean | null;
   avatar_url?: string | null;
   [key: string]: unknown;
 }
@@ -19,7 +20,7 @@ export function useSellersData() {
       const { data, error } = await supabase
         .from('sellers')
         .select('*')
-        .eq('active', true)
+        .or('status.eq.ATIVO,status.is.null')
         .order('name');
 
       if (error) {
@@ -27,7 +28,6 @@ export function useSellersData() {
         throw error;
       }
 
-      console.log(`[useSellersData] Retornou ${(data || []).length} sellers`);
       return data || [];
     },
     staleTime: 1000 * 60 * 5,

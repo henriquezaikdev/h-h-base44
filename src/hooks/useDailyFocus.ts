@@ -68,7 +68,7 @@ export function useDailyFocus() {
 
   const suggestFocus = (tasks: TaskData[]): TaskData[] => {
     if (focusItems.length > 0) return [];
-    const pending = tasks.filter(t => t.status === 'open');
+    const pending = tasks.filter(t => t.status === 'pendente');
     if (pending.length === 0) return [];
 
     const suggestions: TaskData[] = [];
@@ -78,7 +78,7 @@ export function useDailyFocus() {
     if (alta) { suggestions.push(alta); used.add(alta.id); }
 
     const sorted = [...pending].sort(
-      (a, b) => new Date(a.dueDate || '').getTime() - new Date(b.dueDate || '').getTime()
+      (a, b) => new Date(a.taskDate || '').getTime() - new Date(b.taskDate || '').getTime()
     );
     const closest = sorted.find(t => !used.has(t.id));
     if (closest) { suggestions.push(closest); used.add(closest.id); }

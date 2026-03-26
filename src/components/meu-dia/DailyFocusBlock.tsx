@@ -127,7 +127,7 @@ export function DailyFocusBlock({
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
             <p className="text-[11px] mb-2 text-muted-foreground">Selecione mais tarefas:</p>
             {allTasks
-              .filter((t) => t.status === 'open' && !focusTaskIds.has(t.id))
+              .filter((t) => t.status === 'pendente' && !focusTaskIds.has(t.id))
               .slice(0, 5)
               .map((task) => (
                 <div key={task.id}

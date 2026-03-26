@@ -20,7 +20,7 @@ export function useTaskLimits(tasks: TaskData[], sellerId: string | null) {
 
   return useMemo(() => {
     const pendingCount = tasks.filter(
-      (t) => t.status === 'open' && !t.doneAt && (sellerId ? (t.clientSellerId === sellerId || t.assignedTo === sellerId) : true)
+      (t) => t.status === 'pendente' && !t.completedAt && (sellerId ? (t.clientSellerId === sellerId || t.assignedToSellerId === sellerId) : true)
     ).length;
 
     const role = department || 'default';

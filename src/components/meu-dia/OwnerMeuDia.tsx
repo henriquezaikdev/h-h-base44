@@ -51,8 +51,8 @@ export function OwnerMeuDia({
   const [activeTab, setActiveTab] = useState<OwnerTab>('vendas')
 
   const today = startOfDay(new Date())
-  const openTasks = (tasks || []).filter(t => t.status === 'open')
-  const overdueTasks = openTasks.filter(t => t.dueDate && isBefore(new Date(t.dueDate), today))
+  const openTasks = (tasks || []).filter(t => t.status === 'pendente')
+  const overdueTasks = openTasks.filter(t => t.taskDate && isBefore(new Date(t.taskDate), today))
 
   const tabBadge = (tab: OwnerTab) => {
     if (tab === 'tarefas' && overdueTasks.length > 0) return overdueTasks.length

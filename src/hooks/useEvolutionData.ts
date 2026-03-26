@@ -7,14 +7,13 @@ import {
 } from 'date-fns';
 
 /**
- * useEvolutionData — baseado APENAS em tabelas reais do BANCO.md:
- * - orders (seller_id, total, status, created_at)
- * - tasks (assigned_to, status, due_date, done_at)
- * - sellers (id, name, role)
+ * useEvolutionData — schema real do banco 2.0:
+ * - orders (seller_id, total, created_at)
+ * - tasks (created_by_seller_id, assigned_to_seller_id, status_crm,
+ *          completed_at, contact_type, is_deleted)
  *
- * Tabelas de gamificação (seller_levels, seller_errors, seller_stars,
- * interactions, work_month_config) NÃO existem no banco atual.
- * Quando forem criadas, este hook será expandido.
+ * Tabelas que NÃO existem: seller_levels, seller_errors, seller_stars,
+ * interactions, work_month_config
  */
 
 export interface DailyActivity {
@@ -34,11 +33,24 @@ export interface EvolutionData {
   currentMonthOrderCount: number;
   currentMonthTasksCompleted: number;
   currentMonthTasksOpen: number;
+  currentMonthCalls: number;
+  currentMonthWhatsapp: number;
   workDaysInMonth: number;
   workDaysPassed: number;
   previousMonthSales: number;
+  // Placeholders — tabelas de gamificação não existem ainda
+  previousMonthMet: boolean | null;
+  level: null;
+  errors: never[];
+  stars: null;
+  salesByMargin: never[];
   loading: boolean;
 }
+
+const toBrtDateStr = (isoStr: string): string => {
+  const date = new Date(isoStr.replace(' ', 'T'));
+  return format(new Date(date.getTime() - 3 * 60 * 60 * 1000), 'yyyy-MM-dd');
+};
 
 async function fetchEvolutionData(
   sellerId: string,
@@ -50,7 +62,6 @@ async function fetchEvolutionData(
   const monthStart = startOfMonth(refDate);
   const monthEnd = endOfMonth(refDate);
 
-  // Calculate work days
   const allDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
   const workDays = allDays.filter(d => !isWeekend(d));
   const workDaysInMonth = workDays.length;
@@ -63,7 +74,7 @@ async function fetchEvolutionData(
   const monthStartStr = format(monthStart, 'yyyy-MM-dd');
   const monthEndStr = format(monthEnd, 'yyyy-MM-dd');
 
-  // Fetch orders for current month (real columns: seller_id, total, created_at)
+  // 1. Orders do mês
   const { data: ordersData } = await supabase
     .from('orders')
     .select('total, created_at')
@@ -75,38 +86,35 @@ async function fetchEvolutionData(
   const currentMonthSales = orders.reduce((sum, o) => sum + (o.total || 0), 0);
   const currentMonthOrderCount = orders.length;
 
-  // Fetch tasks completed this month (real columns: assigned_to, done_at, status)
+  // 2. Tasks concluídas no mês (schema 2.0)
   const { data: completedTasksData } = await supabase
     .from('tasks')
-    .select('done_at')
-    .eq('assigned_to', sellerId)
-    .eq('status', 'done')
-    .gte('done_at', monthStartStr + 'T00:00:00')
-    .lte('done_at', monthEndStr + 'T23:59:59');
+    .select('completed_at, contact_type')
+    .eq('is_deleted', false)
+    .eq('status_crm', 'concluida')
+    .gte('completed_at', monthStartStr + 'T00:00:00')
+    .lte('completed_at', monthEndStr + 'T23:59:59')
+    .or(`created_by_seller_id.eq.${sellerId},assigned_to_seller_id.eq.${sellerId}`);
 
   const completedTasks = completedTasksData || [];
   const currentMonthTasksCompleted = completedTasks.length;
+  const currentMonthCalls = completedTasks.filter((t: any) => t.contact_type === 'ligacao').length;
+  const currentMonthWhatsapp = completedTasks.filter((t: any) => t.contact_type === 'whatsapp').length;
 
-  // Fetch open tasks count
+  // 3. Tasks abertas
   const { count: openCount } = await supabase
     .from('tasks')
     .select('id', { count: 'exact', head: true })
-    .eq('assigned_to', sellerId)
-    .eq('status', 'open');
+    .eq('is_deleted', false)
+    .eq('status_crm', 'pendente')
+    .or(`created_by_seller_id.eq.${sellerId},assigned_to_seller_id.eq.${sellerId}`);
 
-  // Build daily activity map — inclui TODOS os dias do mês (não só úteis)
-  // para não perder vendas de sábado/domingo
+  // 4. Daily activity map — todos os dias do mês
   const activityMap = new Map<string, DailyActivity>();
   allDays.forEach(day => {
     const dateStr = format(day, 'yyyy-MM-dd');
     activityMap.set(dateStr, { date: dateStr, sales: 0, tasksCompleted: 0 });
   });
-
-  // Converte UTC para Brasília (UTC-3) antes de extrair a data
-  const toBrtDateStr = (isoStr: string): string => {
-    const date = new Date(isoStr.replace(' ', 'T'));
-    return format(new Date(date.getTime() - 3 * 60 * 60 * 1000), 'yyyy-MM-dd');
-  };
 
   orders.forEach(order => {
     if (!order.created_at) return;
@@ -117,9 +125,9 @@ async function fetchEvolutionData(
     }
   });
 
-  completedTasks.forEach(task => {
-    if (!task.done_at) return;
-    const dateStr = toBrtDateStr(task.done_at);
+  completedTasks.forEach((task: any) => {
+    if (!task.completed_at) return;
+    const dateStr = toBrtDateStr(task.completed_at);
     const activity = activityMap.get(dateStr);
     if (activity) {
       activity.tasksCompleted++;
@@ -130,7 +138,7 @@ async function fetchEvolutionData(
     a.date.localeCompare(b.date)
   );
 
-  // Previous month sales for comparison
+  // 5. Previous month sales
   const prevMonth = subMonths(refDate, 1);
   const prevStart = format(startOfMonth(prevMonth), 'yyyy-MM-dd');
   const prevEnd = format(endOfMonth(prevMonth), 'yyyy-MM-dd');
@@ -150,9 +158,17 @@ async function fetchEvolutionData(
     currentMonthOrderCount,
     currentMonthTasksCompleted,
     currentMonthTasksOpen: openCount || 0,
+    currentMonthCalls,
+    currentMonthWhatsapp,
     workDaysInMonth,
     workDaysPassed,
     previousMonthSales,
+    // Placeholders
+    previousMonthMet: null,
+    level: null,
+    errors: [],
+    stars: null,
+    salesByMargin: [],
   };
 }
 
@@ -180,9 +196,16 @@ export function useEvolutionData(sellerId: string | null, month?: number, year?:
     currentMonthOrderCount: 0,
     currentMonthTasksCompleted: 0,
     currentMonthTasksOpen: 0,
+    currentMonthCalls: 0,
+    currentMonthWhatsapp: 0,
     workDaysInMonth: 0,
     workDaysPassed: 0,
     previousMonthSales: 0,
+    previousMonthMet: null,
+    level: null,
+    errors: [],
+    stars: null,
+    salesByMargin: [],
     loading: query.isLoading,
   };
 

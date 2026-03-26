@@ -61,7 +61,7 @@ export function ActionCenterVendedor({
   }, [baseAlerts]);
 
   const { workMonthConfig, isConfigured, sellerMetrics, aggregated, refetch: refetchTargets } = useWorkingDaysTargets(effectiveSellerId);
-  const { tasks, refetch: refetchTasks } = useTasksData(undefined, effectiveSellerId);
+  const { tasks, refetch: refetchTasks } = useTasksData(undefined, effectiveSellerId, isOwner ? 'owner' : 'seller');
   const { hasCriticalBlock, criticalTasks, snooze } = useCriticalBlocker();
   const { focusItems, focusTaskIds, addFocus, removeFocus, suggestFocus, refetch: refetchFocus } = useDailyFocus();
   const taskLimits = useTaskLimits(tasks, effectiveSellerId);
@@ -76,10 +76,10 @@ export function ActionCenterVendedor({
 
   const pendingForSeller = useMemo(() =>
     tasks.filter(t => {
-      if (t.status !== 'open') return false;
+      if (t.status !== 'pendente') return false;
       if (!t.clientId && !t.clientName) return false;
       if (effectiveSellerId) {
-        return t.clientSellerId === effectiveSellerId || t.assignedTo === effectiveSellerId;
+        return t.clientSellerId === effectiveSellerId || t.assignedToSellerId === effectiveSellerId;
       }
       return true;
     }),
@@ -98,9 +98,9 @@ export function ActionCenterVendedor({
   const { overdueTasks, todayTasks, upcomingTasks } = useMemo(() => {
     const searchLower = searchTerm.toLowerCase().trim();
     const pending = tasks
-      .filter(t => t.status === 'open')
+      .filter(t => t.status === 'pendente')
       .filter(t => t.clientId || t.clientName)
-      .filter(t => (effectiveSellerId ? (t.assignedTo === effectiveSellerId) : true))
+      .filter(t => (effectiveSellerId ? (t.assignedToSellerId === effectiveSellerId) : true))
       .filter(t => { if (!searchLower) return true; return t.clientName.toLowerCase().includes(searchLower); });
 
     const overdue: TaskData[] = [];
@@ -108,8 +108,8 @@ export function ActionCenterVendedor({
     const upcoming: TaskData[] = [];
 
     pending.forEach(task => {
-      if (!task.dueDate) { today.push(task); return; }
-      const taskDate = parseISO(task.dueDate);
+      if (!task.taskDate) { today.push(task); return; }
+      const taskDate = parseISO(task.taskDate);
       if (isPast(taskDate) && !isToday(taskDate)) overdue.push(task);
       else if (isToday(taskDate)) today.push(task);
       else if (isFuture(taskDate)) upcoming.push(task);
@@ -120,8 +120,8 @@ export function ActionCenterVendedor({
       const aPrio = priorityOrder[a.priority] ?? 2;
       const bPrio = priorityOrder[b.priority] ?? 2;
       if (aPrio !== bPrio) return aPrio - bPrio;
-      const aDate = a.dueDate ? parseISO(a.dueDate).getTime() : 0;
-      const bDate = b.dueDate ? parseISO(b.dueDate).getTime() : 0;
+      const aDate = a.taskDate ? parseISO(a.taskDate).getTime() : 0;
+      const bDate = b.taskDate ? parseISO(b.taskDate).getTime() : 0;
       return aDate - bDate;
     };
 

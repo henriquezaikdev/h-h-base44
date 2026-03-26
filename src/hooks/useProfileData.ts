@@ -58,30 +58,34 @@ export function useProfileData(userId: string | undefined) {
 
       const today = new Date().toISOString().split('T')[0];
 
-      // KPIs from tasks table (real columns: assigned_to, status, due_date, done_at)
+      // KPIs from tasks table (schema 2.0: assigned_to_seller_id, status_crm, task_date, is_deleted)
       const { count: totalCount } = await supabase
         .from('tasks')
         .select('id', { count: 'exact', head: true })
-        .eq('assigned_to', userId);
+        .eq('is_deleted', false)
+        .or(`created_by_seller_id.eq.${userId},assigned_to_seller_id.eq.${userId}`);
 
       const { count: completedCount } = await supabase
         .from('tasks')
         .select('id', { count: 'exact', head: true })
-        .eq('assigned_to', userId)
-        .eq('status', 'done');
+        .eq('is_deleted', false)
+        .eq('status_crm', 'concluida')
+        .or(`created_by_seller_id.eq.${userId},assigned_to_seller_id.eq.${userId}`);
 
       const { count: openCount } = await supabase
         .from('tasks')
         .select('id', { count: 'exact', head: true })
-        .eq('assigned_to', userId)
-        .eq('status', 'open');
+        .eq('is_deleted', false)
+        .eq('status_crm', 'pendente')
+        .or(`created_by_seller_id.eq.${userId},assigned_to_seller_id.eq.${userId}`);
 
       const { count: overdueCount } = await supabase
         .from('tasks')
         .select('id', { count: 'exact', head: true })
-        .eq('assigned_to', userId)
-        .eq('status', 'open')
-        .lt('due_date', today);
+        .eq('is_deleted', false)
+        .eq('status_crm', 'pendente')
+        .lt('task_date', today)
+        .or(`created_by_seller_id.eq.${userId},assigned_to_seller_id.eq.${userId}`);
 
       setKpis({
         totalTasks: totalCount || 0,

@@ -113,7 +113,7 @@ export function TaskPrioritySection({
                         </div>
                         <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
                           <span>
-                            {task.dueDate ? (() => { try { return format(parseISO(task.dueDate), "dd/MM", { locale: ptBR }); } catch { return task.dueDate; } })() : '\u2014'}
+                            {task.taskDate ? (() => { try { return format(parseISO(task.taskDate), "dd/MM", { locale: ptBR }); } catch { return task.taskDate; } })() : '\u2014'}
                           </span>
                           {variant === 'overdue' && <span className="font-medium text-destructive">Atrasada</span>}
                           {taskAge >= 8 && (
