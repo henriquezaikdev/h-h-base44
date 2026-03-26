@@ -10,8 +10,11 @@ Nunca traduzir nomes automaticamente.
 - RLS via auth_company_id()
 - Timestamps: created_at, updated_at (timestamptz)
 - PKs sempre uuid com gen_random_uuid()
+- Quantidade: sempre qty (nunca quantity)
 
-## TABELAS
+---
+
+## CRM
 
 ### clients
 | Coluna | Tipo |
@@ -51,13 +54,44 @@ Nunca traduzir nomes automaticamente.
 | created_at | timestamptz |
 | updated_at | timestamptz |
 
+### buyers
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| client_id | uuid (fk → clients) |
+| name | text |
+| email | text |
+| phone | text |
+| role | text |
+| created_at | timestamptz |
+
+### sellers
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| auth_user_id | uuid |
+| name | text |
+| email | text |
+| role | text (owner, admin, manager, seller, logistics) |
+| department | text |
+| avatar_url | text |
+| active | boolean |
+| created_at | timestamptz |
+
+**RLS sellers:** nunca subquery direto na policy — usar get_my_company_id() SECURITY DEFINER.
+
+---
+
+## PEDIDOS E ORÇAMENTOS
+
 ### orders
 | Coluna | Tipo |
 |---|---|
 | id | uuid |
 | company_id | uuid |
-| client_id | uuid |
-| seller_id | uuid |
+| client_id | uuid (fk → clients) |
+| seller_id | uuid (fk → sellers) |
 | status | USER-DEFINED |
 | subtotal | numeric |
 | discount | numeric |
@@ -70,25 +104,24 @@ Nunca traduzir nomes automaticamente.
 | nfe_status | text |
 | nfe_key | text |
 | nfe_url | text |
+| nfe_ref | text |
 | nfe_issued_at | timestamptz |
 | approved_at | timestamptz |
 | picked_at | timestamptz |
-| picked_by | uuid |
+| picked_by | uuid (fk → sellers) |
 | delivered_at | timestamptz |
 | created_at | timestamptz |
 | updated_at | timestamptz |
 
-## REGRA DE NEGÓCIO — ORDERS
-- Pedido aprovado impacta estoque (stock_qty deve ser baixado)
-- Fluxo: created → approved → picked → delivered
-- Estoque é baixado automaticamente na aprovação
+**Regra:** Pedido aprovado baixa estoque automaticamente. Fluxo: created → approved → picked → delivered.
+**JOIN:** orders tem duas FKs para sellers (seller_id e picked_by) — join direto é ambíguo, usar query separada.
 
 ### order_items
 | Coluna | Tipo |
 |---|---|
 | id | uuid |
-| order_id | uuid |
-| product_id | uuid |
+| order_id | uuid (fk → orders) |
+| product_id | uuid (fk → products) |
 | qty | numeric |
 | unit_price | numeric |
 | discount | numeric |
@@ -98,34 +131,13 @@ Nunca traduzir nomes automaticamente.
 | picked | boolean |
 | created_at | timestamptz |
 
-### products
-| Coluna | Tipo |
-|---|---|
-| id | uuid |
-| company_id | uuid |
-| category_id | uuid |
-| sku | text |
-| name | text |
-| description | text |
-| unit | text |
-| cost | numeric |
-| price | numeric |
-| ncm | text |
-| stock_qty | integer |
-| stock_min | integer |
-| stock_max | integer |
-| is_active | boolean |
-| source_system | text |
-| created_at | timestamptz |
-| updated_at | timestamptz |
-
 ### quotes
 | Coluna | Tipo |
 |---|---|
 | id | uuid |
 | company_id | uuid |
-| client_id | uuid |
-| seller_id | uuid |
+| client_id | uuid (fk → clients) |
+| seller_id | uuid (fk → sellers) |
 | status | text (pending, approved, rejected, converted) |
 | subtotal | numeric |
 | discount | numeric |
@@ -137,22 +149,208 @@ Nunca traduzir nomes automaticamente.
 | created_at | timestamptz |
 | updated_at | timestamptz |
 
-## RELAÇÃO QUOTES → ORDERS
-- Um quote pode ser convertido em order
-- Quando convertido: status = converted + gera novo order_id
-- quote_items são copiados para order_items na conversão
-
 ### quote_items
 | Coluna | Tipo |
 |---|---|
 | id | uuid |
-| quote_id | uuid |
-| product_id | uuid |
+| quote_id | uuid (fk → quotes) |
+| product_id | uuid (fk → products) |
 | qty | numeric |
 | unit_price | numeric |
 | discount | numeric |
 | total | numeric |
 | created_at | timestamptz |
+
+**Relação:** quote convertido → status = converted + itens copiados para order_items.
+
+---
+
+## PRODUTOS E ESTOQUE
+
+### products
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| category_id | uuid (fk → product_categories) |
+| sku | text |
+| name | text |
+| description | text |
+| unit | text |
+| cost | numeric (CMV = custo x 1.15) |
+| price | numeric |
+| ncm | text |
+| stock_qty | integer |
+| stock_min | integer |
+| stock_max | integer |
+| is_active | boolean |
+| source_system | text |
+| created_at | timestamptz |
+| updated_at | timestamptz |
+
+### product_categories
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| name | text |
+| keywords | jsonb (array de strings) |
+| commission_pct | numeric |
+| lead_time_days | integer |
+| created_at | timestamptz |
+
+### stock_movements
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| product_id | uuid (fk → products) |
+| type | text (ENTRADA, SAIDA, AJUSTE, xml_import) |
+| quantity | numeric |
+| reason | text |
+| created_by | uuid (fk → sellers) |
+| created_at | timestamptz |
+
+### stock_entries
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| supplier_name | text |
+| reference | text |
+| nf_number | text |
+| nf_date | date |
+| entry_date | date |
+| total_value | numeric |
+| status | text (LANCADA, RASCUNHO) |
+| created_by | uuid (fk → sellers) |
+| created_at | timestamptz |
+
+### stock_entry_items
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| entry_id | uuid (fk → stock_entries, cascade) |
+| product_id | uuid (fk → products) |
+| qty | numeric |
+| unit_cost | numeric |
+| created_at | timestamptz |
+
+---
+
+## COMPRAS E FORNECEDORES
+
+### purchase_requests
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| title | text |
+| status | text (NOVA_SOLICITACAO, AGUARDANDO_COMPRADOR, EM_COTACAO, AGUARDANDO_APROVACAO_SOLICITANTE, APROVADA_PARA_COMPRAR, EM_COMPRA_FORNECEDOR, AGUARDANDO_ENTREGA_FORNECEDOR, ENTREGUE, CANCELADO) |
+| priority | text (NORMAL, URGENTE, CRITICO) |
+| client_id | uuid (fk → clients) |
+| requester_id | uuid (fk → sellers) |
+| buyer_id | uuid (fk → sellers) |
+| deadline | date |
+| origin | text |
+| product_id | uuid (fk → products) |
+| created_at | timestamptz |
+| updated_at | timestamptz |
+
+### purchase_request_items
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| request_id | uuid (fk → purchase_requests) |
+| name | text |
+| qty | numeric |
+| unit | text |
+| created_at | timestamptz |
+
+### suppliers
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| name | text |
+| cnpj | text |
+| whatsapp | text |
+| city | text |
+| status | text (active, inactive) |
+| created_at | timestamptz |
+| updated_at | timestamptz |
+
+### quote_sessions
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| title | text |
+| status | text (aberta, em_comparacao, fechada) |
+| origin | text |
+| created_at | timestamptz |
+| updated_at | timestamptz |
+
+### supplier_quotes
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| session_id | uuid (fk → quote_sessions) |
+| supplier_name | text |
+| created_at | timestamptz |
+
+### quote_lines
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| supplier_quote_id | uuid (fk → supplier_quotes) |
+| item_name | text |
+| unit_price | numeric |
+| quantity | numeric |
+| winner | boolean |
+| created_at | timestamptz |
+
+---
+
+## TAREFAS
+
+### tasks
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| title | text |
+| description | text |
+| client_id | uuid (fk → clients) |
+| assigned_to | uuid (fk → sellers) |
+| priority | text (baixa, normal, alta, urgente) |
+| due_date | date |
+| done_at | timestamptz |
+| status | text (open, completed, cancelled) |
+| is_recurring | boolean |
+| created_at | timestamptz |
+| updated_at | timestamptz |
+
+---
+
+## FINANCEIRO
+
+### fin_payables
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| description | text |
+| amount | numeric |
+| due_date | date |
+| status | text (default: pendente) |
+| origin | text |
+| origin_id | uuid |
+| created_at | timestamptz |
+
+---
+
+## FISCAL
 
 ### fiscal_config
 | Coluna | Tipo |
@@ -167,13 +365,15 @@ Nunca traduzir nomes automaticamente.
 | created_at | timestamptz |
 | updated_at | timestamptz |
 
-## SEGURANÇA FISCAL_CONFIG
-- Tokens nunca expostos no frontend
-- Uso exclusivo dentro de Edge Functions
+**Segurança:** tokens nunca expostos no frontend — uso exclusivo em Edge Functions.
+
+---
 
 ## EDGE FUNCTIONS DEPLOYADAS
 - emitir-nfe: recebe order_id + company_id, monta payload Focus NFe, emite NF-e
 - consultar-nfe: recebe order_id + company_id + ref, consulta status no Focus NFe
+- get-danfe-url: gera URL do DANFE
+- assistente-cliente: IA comercial na ficha do cliente
 
 ## HOOKS DISPONÍVEIS
 - useSupabaseQuery — padrão para todas as queries
@@ -181,21 +381,3 @@ Nunca traduzir nomes automaticamente.
 
 ## COMPONENTES DISPONÍVEIS
 - EmitirNFeButton — botão + modal de emissão NF-e (src/components/EmitirNFeButton.tsx)
-
-## DECISÕES IMPORTANTES
-- NF-e via Focus NFe
-- orders e quotes são tabelas separadas
-- Conversão de orçamento para pedido: quote.status = converted + copia itens para order_items
-- Nome padrão de quantidade: qty (nunca quantity)
-- Sistema é a fonte da verdade
-- IA nunca executa ações automaticamente
-- Estoque é baixado automaticamente na aprovação do pedido
-- Pedido pode ser criado direto sem passar por orçamento
-- Orçamento recusado registra motivo, preço e nome do concorrente (todos opcionais)
-- CFOP 5102 para clientes em GO, 6102 para outros estados
-- CMV = custo de compra + 15% — products.cost armazena CMV calculado
-- consumidor_final derivado de client.ie: com IE = 0 (contribuinte), sem IE = 1 (não contribuinte)
-- Data de emissão NF-e sempre em UTC-3 (horário Brasília)
-- nome_destinatario em homologação = NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL
-- modalidade_frete = 9 (sem frete) como padrão
-- codigo_ncm obrigatório com 8 caracteres

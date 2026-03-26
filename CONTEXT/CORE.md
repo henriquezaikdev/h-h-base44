@@ -115,15 +115,12 @@ TAREFA:
 ## STATUS ATUAL
 Data: 26/03/2026
 Último concluído:
-- Endereços dos clientes importados via CSV do Conta Azul
-- Encoding UTF-8 corrigido para caracteres acentuados
-- Forma de pagamento importada via orders-export do Conta Azul
-- Parcelamento implementado (PaymentSection.tsx compartilhado, due_dates jsonb)
-- Coluna due_dates adicionada na tabela orders
-- Bugs corrigidos em ClientePage.tsx
-- Tabela Top 10 da ficha do cliente corrigida
-- Nome do cliente na listagem de pedidos agora é link clicável
-- Estrutura de contexto reorganizada (CONTEXT/DECISOES.md e CONTEXT/PESSOAS.md criados)
+- CLAUDE.md reescrito com identidade completa, regras, módulos, fases, design system
+- CONTEXT/DECISOES.md criado (decisões organizadas por categoria)
+- CONTEXT/PESSOAS.md criado (6 perfis de usuário)
+- CONTEXT/CORE.md e CONTEXT/BANCO.md atualizados com status da sessão
+- Checklist de Qualidade Visual adicionado ao CLAUDE.md (11 categorias)
+- Checklist expandido com: formulários, tabelas/dados, feedback, acessibilidade
 Em andamento: Correções na ficha do cliente (ClientePage.tsx)
 Próximo passo:
 - Continuar correções na ficha do cliente

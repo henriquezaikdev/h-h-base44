@@ -78,6 +78,70 @@ Strict mode is fully enabled — `noUnusedLocals`, `noUnusedParameters`, and `no
 - Zero emojis, zero gradientes, zero sombras pesadas
 - Referência visual: Linear, Stripe, Vercel
 
+## CHECKLIST DE QUALIDADE VISUAL
+Obrigatório antes de entregar qualquer componente ou página.
+
+### 1. CONTRASTE E CORES
+- Texto principal: mínimo 4.5:1 de contraste sobre o fundo
+- Fundo geral: #FAFAF9, painéis brancos puros
+- Cor de destaque exclusivamente Índigo #3B5BDB
+- Zero cores arbitrárias fora do design system
+
+### 2. TIPOGRAFIA
+- Fonte DM Sans em todo o sistema
+- Texto mínimo 14px, corpo 16px
+- Hierarquia clara: títulos bold, corpo regular, labels medium
+
+### 3. ESPAÇAMENTO
+- Sistema obrigatório de múltiplos de 4px (4, 8, 12, 16, 24, 32, 48)
+- Zero valores arbitrários de padding/margin/gap
+- Colunas com largura mínima definida em tabelas para evitar colisão de conteúdo
+
+### 4. ÍCONES E ELEMENTOS VISUAIS
+- Apenas lucide-react linha fina
+- Zero emojis como ícones
+- Zero gradientes
+- Zero sombras pesadas (no máximo shadow-sm)
+
+### 5. INTERAÇÃO
+- Todo elemento clicável com área mínima de 44x44px
+- Hover state definido em todos os botões e links
+- Loading state em toda ação assíncrona
+- Feedback visual em menos de 150ms
+- Botão desabilitado durante submit para evitar duplo clique
+- Modais fecham com Escape e clique fora
+
+### 6. FORMULÁRIOS
+- Mensagens de erro inline abaixo do campo (não toast genérico)
+- Asterisco em campos obrigatórios
+- Validação onBlur nos campos críticos (CNPJ, email, CEP)
+
+### 7. TABELAS E DADOS
+- Skeleton/shimmer durante carregamento (não tela em branco)
+- Empty state com mensagem e ação quando não há dados
+- Tabelas com largura mínima por coluna para evitar colunas colando
+
+### 8. FEEDBACK
+- Toast de sucesso/erro após toda ação (salvar, excluir, emitir NF-e)
+- Confirmação antes de ações destrutivas (excluir, cancelar pedido)
+
+### 9. ACESSIBILIDADE
+- aria-label em botões que só têm ícone
+- Foco visível em elementos interativos (outline ou ring)
+
+### 10. LAYOUT E RESPONSIVIDADE
+- Testar em 3 larguras: 1280px, 1024px, 768px
+- Zero rolagem horizontal
+- Colunas com whitespace-nowrap em dados que não podem quebrar linha (datas, valores, CNPJs)
+- Campos de texto com truncate quando o container for limitado
+
+### 11. CONSISTÊNCIA
+- Reutilizar componentes existentes antes de criar novos
+- Padrão visual igual entre modal de criação e modal de edição do mesmo recurso
+- Labels e nomenclatura consistentes em todo o sistema
+
+Instrução: antes de entregar qualquer componente novo ou modificado, revisar este checklist e corrigir qualquer item que não esteja em conformidade.
+
 ## PERFIS DE USUÁRIO
 - owner (Henrique): OwnerMeuDia
 - vendedor: ActionCenter

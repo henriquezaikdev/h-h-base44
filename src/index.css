@@ -1,55 +1,416 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300..700&display=swap');
 @import "tailwindcss";
+@config "../tailwind.config.ts";
 
-@theme {
-  /* Fonte */
+/* ─── CSS Custom Properties — Design Tokens ──────────────────────────────────
+   All colour values are space-separated HSL channels (no hsl() wrapper) so
+   Tailwind opacity modifiers like bg-primary/50 work correctly.
+   ────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Surface */
+  --background:         60 9% 98%;      /* #FAFAF9 — warm off-white page bg  */
+  --foreground:         222 47% 11%;    /* #111827 — primary text             */
+
+  /* Card / Popover */
+  --card:               0 0% 100%;
+  --card-foreground:    222 47% 11%;
+  --popover:            0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+
+  /* Primary — indigo */
+  --primary:            231 62% 54%;    /* #3B5BDB                            */
+  --primary-foreground: 0 0% 100%;
+
+  /* Secondary — neutral cool */
+  --secondary:          220 14% 96%;    /* #F3F4F6                            */
+  --secondary-foreground: 222 47% 11%;
+
+  /* Muted */
+  --muted:              220 14% 96%;
+  --muted-foreground:   220 9% 46%;     /* #6B7280                            */
+
+  /* Accent — subtle indigo tint */
+  --accent:             231 100% 97%;   /* #EEF2FF                            */
+  --accent-foreground:  231 62% 54%;
+
+  /* Destructive */
+  --destructive:        0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+
+  /* Success / Warning (not Tailwind defaults — exposed as CSS vars only) */
+  --success:            151 55% 42%;    /* emerald-600 equivalent             */
+  --success-foreground: 0 0% 100%;
+  --warning:            38 92% 50%;     /* amber-500 equivalent               */
+  --warning-foreground: 0 0% 100%;
+
+  /* Chrome */
+  --border:             220 13% 91%;    /* #E5E7EB                            */
+  --border-light:       220 14% 96%;    /* #F3F4F6                            */
+  --input:              220 13% 91%;
+  --ring:               231 62% 54%;
+
+  /* Shape */
+  --radius:             0.75rem;
+
+  /* Sidebar — dark navy */
+  --sidebar-background:          222 47% 11%;   /* #111827 equiv              */
+  --sidebar-foreground:          220 13% 91%;   /* #E5E7EB — light text       */
+  --sidebar-primary:             231 62% 54%;   /* indigo active bg           */
+  --sidebar-primary-foreground:  0 0% 100%;
+  --sidebar-accent:              222 47% 17%;   /* hover — slightly lighter   */
+  --sidebar-accent-foreground:   220 13% 91%;
+  --sidebar-border:              222 47% 17%;
+  --sidebar-ring:                231 62% 54%;
+  --sidebar-muted-foreground:    220 9% 60%;    /* icon / sub-label in sidebar*/
+}
+
+/* Dark mode overrides */
+.dark {
+  --background:         222 47% 11%;
+  --foreground:         220 13% 91%;
+
+  --card:               222 47% 14%;
+  --card-foreground:    220 13% 91%;
+  --popover:            222 47% 14%;
+  --popover-foreground: 220 13% 91%;
+
+  --primary:            231 62% 62%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary:          222 47% 17%;
+  --secondary-foreground: 220 13% 91%;
+
+  --muted:              222 47% 17%;
+  --muted-foreground:   220 9% 60%;
+
+  --accent:             231 62% 22%;
+  --accent-foreground:  220 13% 91%;
+
+  --destructive:        0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border:             222 47% 17%;
+  --border-light:       222 47% 20%;
+  --input:              222 47% 17%;
+  --ring:               231 62% 62%;
+
+  --sidebar-background:         222 47% 8%;
+  --sidebar-foreground:         220 13% 91%;
+  --sidebar-accent:             222 47% 13%;
+  --sidebar-accent-foreground:  220 13% 91%;
+  --sidebar-border:             222 47% 13%;
+}
+
+/* ─── Tailwind v4 Theme Mapping ───────────────────────────────────────────────
+   @theme inline tells v4 to reference the CSS vars directly instead of
+   duplicating them, keeping generated CSS lean.
+   ────────────────────────────────────────────────────────────────────────── */
+
+@theme inline {
+  /* Typography */
   --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
 
-  /* Cores base */
-  --color-bg: #FAFAF9;
-  --color-surface: #FFFFFF;
-  --color-border: #E5E7EB;
-  --color-border-light: #F3F4F6;
+  /* Border radius derived from token */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 
-  /* Texto */
-  --color-text: #374151;
-  --color-text-muted: #6B7280;
-  --color-text-heading: #111827;
+  /* Colours → Tailwind utilities */
+  --color-background:            hsl(var(--background));
+  --color-foreground:            hsl(var(--foreground));
 
-  /* Destaque índigo */
-  --color-accent: #3B5BDB;
-  --color-accent-hover: #3451C7;
-  --color-accent-subtle: #EEF2FF;
-  --color-accent-border: #C7D2FE;
+  --color-card:                  hsl(var(--card));
+  --color-card-foreground:       hsl(var(--card-foreground));
 
-  /* Sem gradientes — só sólidos */
+  --color-popover:               hsl(var(--popover));
+  --color-popover-foreground:    hsl(var(--popover-foreground));
+
+  --color-primary:               hsl(var(--primary));
+  --color-primary-foreground:    hsl(var(--primary-foreground));
+
+  --color-secondary:             hsl(var(--secondary));
+  --color-secondary-foreground:  hsl(var(--secondary-foreground));
+
+  --color-muted:                 hsl(var(--muted));
+  --color-muted-foreground:      hsl(var(--muted-foreground));
+
+  --color-accent:                hsl(var(--accent));
+  --color-accent-foreground:     hsl(var(--accent-foreground));
+
+  --color-destructive:           hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-success:               hsl(var(--success));
+  --color-success-foreground:    hsl(var(--success-foreground));
+
+  --color-warning:               hsl(var(--warning));
+  --color-warning-foreground:    hsl(var(--warning-foreground));
+
+  --color-border:                hsl(var(--border));
+  --color-border-light:          hsl(var(--border-light));
+  --color-input:                 hsl(var(--input));
+  --color-ring:                  hsl(var(--ring));
+
+  /* Sidebar palette */
+  --color-sidebar:                       hsl(var(--sidebar-background));
+  --color-sidebar-foreground:            hsl(var(--sidebar-foreground));
+  --color-sidebar-primary:               hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground:    hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-accent:                hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground:     hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-border:                hsl(var(--sidebar-border));
+  --color-sidebar-ring:                  hsl(var(--sidebar-ring));
+  --color-sidebar-muted-foreground:      hsl(var(--sidebar-muted-foreground));
+
+  /* Shadows — flat, no coloured glows */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-md: 0 1px 4px 0 rgb(0 0 0 / 0.08);
+  --shadow-lg: 0 4px 12px 0 rgb(0 0 0 / 0.10);
 }
 
-/* Reset base */
-*, *::before, *::after {
-  box-sizing: border-box;
+/* ─── Base Styles ─────────────────────────────────────────────────────────── */
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.6;
+    color: hsl(var(--foreground));
+    background-color: hsl(var(--background));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: hsl(var(--foreground));
+    font-weight: 600;
+    line-height: 1.25;
+    margin: 0;
+  }
+
+  p { margin: 0; }
+
+  /* Focus ring — keyboard only */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  /* Custom scrollbar — thin, neutral */
+  ::-webkit-scrollbar          { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track    { background: transparent; }
+  ::-webkit-scrollbar-thumb    { background: hsl(var(--border)); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
+
+  /* Sidebar scrollbar — even subtler on dark bg */
+  .sidebar-scroll::-webkit-scrollbar-thumb { background: hsl(var(--sidebar-border)); }
 }
 
-body {
-  margin: 0;
-  font-family: var(--font-sans);
-  font-size: 1rem;
-  line-height: 1.6;
-  color: var(--color-text);
-  background-color: var(--color-bg);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* ─── Component Utilities ─────────────────────────────────────────────────── */
+
+@layer components {
+
+  /* ── Stat Card ────────────────────────────────────────────────────────── */
+  .stat-card {
+    @apply bg-card border border-border rounded-xl px-4 py-4 flex flex-col gap-1;
+  }
+  .stat-card-label {
+    @apply text-xs font-medium text-muted-foreground uppercase tracking-wide;
+  }
+  .stat-card-value {
+    @apply text-xl font-semibold tabular-nums text-foreground;
+  }
+  .stat-card-sub {
+    @apply text-xs text-muted-foreground;
+  }
+  /* colour modifiers */
+  .stat-card-primary .stat-card-value { @apply text-primary; }
+  .stat-card-success .stat-card-value { @apply text-success; }
+  .stat-card-danger  .stat-card-value { @apply text-destructive; }
+
+  /* accent top border strips */
+  .stat-card-primary { @apply border-t-2 border-t-primary; }
+  .stat-card-success { @apply border-t-2 border-t-success; }
+  .stat-card-danger  { @apply border-t-2 border-t-destructive; }
+  .stat-card-warning { @apply border-t-2 border-t-warning; }
+
+  /* ── Data Table ───────────────────────────────────────────────────────── */
+  .data-table {
+    @apply w-full text-sm;
+  }
+  .data-table thead tr {
+    @apply bg-secondary border-b border-border;
+  }
+  .data-table thead th {
+    @apply text-left px-4 py-2.5 text-xs font-medium text-muted-foreground uppercase tracking-wide whitespace-nowrap;
+  }
+  .data-table thead th.text-right {
+    @apply text-right;
+  }
+  .data-table thead th.text-center {
+    @apply text-center;
+  }
+  .data-table tbody tr {
+    @apply border-b border-border-light transition-colors;
+  }
+  .data-table tbody tr:hover {
+    @apply bg-secondary/50;
+  }
+  .data-table tbody td {
+    @apply px-4 py-3 text-foreground;
+  }
+  .data-table tfoot tr {
+    @apply border-t-2 border-border bg-secondary;
+  }
+  .data-table tfoot td {
+    @apply px-4 py-3 text-sm font-semibold text-foreground;
+  }
+
+  /* ── Sidebar Item ─────────────────────────────────────────────────────── */
+  .sidebar-item {
+    @apply flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium
+           transition-colors cursor-pointer select-none
+           text-sidebar-foreground
+           hover:bg-sidebar-accent hover:text-sidebar-accent-foreground;
+  }
+  .sidebar-item.active,
+  .sidebar-item[aria-current="page"] {
+    @apply bg-primary text-primary-foreground;
+  }
+  .sidebar-item-icon {
+    @apply shrink-0 text-sidebar-muted-foreground;
+  }
+  .sidebar-item.active   .sidebar-item-icon,
+  .sidebar-item[aria-current="page"] .sidebar-item-icon {
+    @apply text-primary-foreground;
+  }
+
+  /* ── HH Badges ───────────────────────────────────────────────────────── */
+  /* Base shared properties written once via CSS; variants extend it. */
+  .hh-badge,
+  .hh-badge-success,
+  .hh-badge-warning,
+  .hh-badge-danger,
+  .hh-badge-info,
+  .hh-badge-neutral,
+  .hh-badge-primary {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium leading-none;
+  }
+  .hh-badge-success { @apply bg-emerald-50 text-emerald-700; }
+  .hh-badge-warning { @apply bg-amber-50 text-amber-700; }
+  .hh-badge-danger  { @apply bg-red-50 text-red-600; }
+  .hh-badge-info    { @apply bg-accent text-accent-foreground; }
+  .hh-badge-neutral { @apply bg-muted text-muted-foreground; }
+  .hh-badge-primary { @apply bg-primary text-primary-foreground; }
+
+  /* ── AI Blocks ───────────────────────────────────────────────────────── */
+  .ai-block,
+  .ai-block-info,
+  .ai-block-success,
+  .ai-block-warning,
+  .ai-block-error,
+  .ai-block-neutral {
+    @apply rounded-xl border px-4 py-3 text-sm leading-relaxed;
+  }
+  .ai-block-info    { @apply bg-accent/60 border-primary/20 text-foreground; }
+  .ai-block-success { @apply bg-emerald-50 border-emerald-200 text-emerald-900; }
+  .ai-block-warning { @apply bg-amber-50 border-amber-200 text-amber-900; }
+  .ai-block-error   { @apply bg-red-50 border-red-200 text-red-900; }
+  .ai-block-neutral { @apply bg-secondary border-border text-muted-foreground; }
+
+  /* ── Page Shell ──────────────────────────────────────────────────────── */
+  .page-root {
+    @apply min-h-screen bg-background;
+  }
+  .page-header {
+    @apply bg-card border-b border-border px-6 py-4;
+  }
+  .page-title {
+    @apply text-lg font-semibold text-foreground;
+  }
+  .page-subtitle {
+    @apply text-sm text-muted-foreground mt-0.5;
+  }
+  .page-body {
+    @apply px-6 py-4 space-y-4;
+  }
+
+  /* ── Card ────────────────────────────────────────────────────────────── */
+  .hh-card {
+    @apply bg-card border border-border rounded-xl overflow-hidden;
+  }
+  .hh-card-header {
+    @apply flex items-center justify-between px-4 py-3 border-b border-border-light;
+  }
+  .hh-card-title {
+    @apply text-sm font-semibold text-foreground;
+  }
+
+  /* ── Form Controls ───────────────────────────────────────────────────── */
+  .hh-input {
+    @apply w-full px-3 py-1.5 text-sm border border-input rounded-lg
+           text-foreground placeholder:text-muted-foreground bg-card
+           outline-none transition
+           focus:border-ring focus:ring-2 focus:ring-ring/20;
+  }
+  .hh-select {
+    @apply text-sm border border-input rounded-lg px-3 py-1.5
+           text-foreground outline-none bg-card
+           focus:border-ring transition;
+  }
+
+  /* ── Buttons ─────────────────────────────────────────────────────────── */
+  .btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-ghost,
+  .btn-destructive,
+  .btn-outline {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg
+           text-sm font-medium transition-colors cursor-pointer select-none
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary     { @apply bg-primary text-primary-foreground hover:bg-primary/90; }
+  .btn-secondary   { @apply bg-secondary text-secondary-foreground hover:bg-secondary/80; }
+  .btn-ghost       { @apply text-muted-foreground hover:text-foreground hover:bg-secondary; }
+  .btn-destructive { @apply bg-destructive text-destructive-foreground hover:bg-destructive/90; }
+  .btn-outline     { @apply border border-border text-foreground hover:bg-secondary; }
+
+  /* ── Alert / Notice ──────────────────────────────────────────────────── */
+  .hh-alert,
+  .hh-alert-danger,
+  .hh-alert-warning,
+  .hh-alert-info,
+  .hh-alert-success {
+    @apply flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium border;
+  }
+  .hh-alert-danger  { @apply bg-red-50 border-red-200 text-red-700; }
+  .hh-alert-warning { @apply bg-amber-50 border-amber-200 text-amber-700; }
+  .hh-alert-info    { @apply bg-accent border-primary/20 text-accent-foreground; }
+  .hh-alert-success { @apply bg-emerald-50 border-emerald-200 text-emerald-700; }
 }
 
-h1, h2, h3, h4, h5, h6 {
-  color: var(--color-text-heading);
-  font-weight: 600;
-  line-height: 1.25;
-  margin: 0;
-}
+/* ─── Utility Extras ──────────────────────────────────────────────────────── */
 
-p {
-  margin: 0;
+@layer utilities {
+  /* Tabular numerals shorthand already in Tailwind, aliased for clarity */
+  .nums { font-variant-numeric: tabular-nums; }
+
+  /* Subtle skeleton shimmer */
+  .skeleton {
+    @apply bg-muted animate-pulse rounded-md;
+  }
+
+  /* Truncated text with tooltip via title attr */
+  .truncate-cell {
+    @apply truncate max-w-xs;
+  }
 }

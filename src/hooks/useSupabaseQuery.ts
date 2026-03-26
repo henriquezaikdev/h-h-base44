@@ -97,7 +97,7 @@ export function useSupabaseQuery<T>(
     }
 
     // seller is ready — run query
-    runQuery({ seller, company_id: seller.company_id })
+    runQuery({ seller: seller!, company_id: seller!.company_id })
 
     return () => { cancelledRef.current = true }
 
