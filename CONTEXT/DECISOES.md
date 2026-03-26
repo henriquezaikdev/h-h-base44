@@ -43,10 +43,15 @@
 ### Nomenclatura
 - Nome padrão de quantidade: qty (nunca quantity)
 
+### Equivalência de Produtos
+- Produtos com mesma função comercial (ex: Report A4 e Chamex A4) são unificados
+- Tabela futura: hh_produto_equivalencia (produto_id_a, produto_id_b)
+- Sempre usar UUIDs reais do banco, nunca buscar por strings textuais
+
 ## DADOS E INTEGRAÇÕES
 
 ### Sistema é a fonte da verdade
-- Não depende do Conta Azul
+- Não depende do Conta Azul (renovação expira 14/05/2026)
 - IA nunca executa ações automaticamente — apenas sugere e preenche
 
 ### APIs externas
@@ -54,6 +59,25 @@
 - Busca CEP via ViaCEP: https://viacep.com.br/ws/{cep}/json/
 
 ## BANCO E SEGURANÇA
+
+### Enum task_status (26/03/2026)
+- Valores válidos: open, done, cancelled
+- NÃO usar: completed, concluida, pendente, aberta, em_andamento
+- Descoberto via teste direto no Supabase REST API
+
+### Timezone UTC → BRT (26/03/2026)
+- Timestamps do Supabase vêm em UTC
+- Converter para BRT (UTC-3) antes de extrair datas para agrupar por dia
+- Timestamps podem vir com espaço em vez de T (ex: "2026-03-03 15:43:49+00") — usar .replace(' ', 'T') antes de new Date()
+
+### Sellers duplicados (26/03/2026)
+- Coluna active (boolean, default true) adicionada à tabela sellers
+- Sellers duplicados da migração marcados com active=false
+- Todas as queries filtram .eq('active', true)
+
+### Tabelas que NÃO existem (26/03/2026)
+- work_month_config, daily_focus, app_config, seller_levels, interactions, user_medals, daily_goals
+- Hooks usam fallbacks: localStorage (daily_focus), defaults hardcoded (task_limits), placeholders (gamificação)
 
 ### RLS sellers
 - Nunca usar subquery direto em sellers dentro de policy — causa recursão infinita
@@ -76,6 +100,7 @@
 - sellers: 12, product_categories: 15, clients: 1.107, products: 3.115, orders: 7.276, order_items: 9.128
 - FKs products e orders recriadas
 - FKs order_items sem recriar (dados órfãos — não impacta operação)
+- Sellers duplicados da migração desativados com active=false
 
 ### Importação de endereços via CSV Conta Azul (25-26/03/2026)
 - Encoding UTF-8 corrigido para caracteres acentuados
@@ -91,3 +116,30 @@
 - Prompts para o Claude Code devem ser sempre em bloco único para copiar e colar
 - Nunca sugerir comandos como "code arquivo.tsx" — não funciona sem VS Code no PATH
 - Para editar arquivos: sempre passar instrução em linguagem natural para o Claude Code executar
+- Nunca usar agentes paralelos neste projeto — sempre sequencial, um arquivo por vez
+
+## OWNERMUDIA — DECISÕES DE IMPLEMENTAÇÃO (26/03/2026)
+
+### Componentes criados
+- ActionCenterVendedor.tsx: orquestrador principal da aba Vendas
+- ClickableScoreboard.tsx: cards de métricas com campos opcionais e defaults
+- DailyFocusBlock.tsx: foco obrigatório do dia (max 3 itens, localStorage)
+- TaskPrioritySection.tsx: seções colapsáveis por prioridade
+- OpenQuotesCard.tsx: orçamentos em aberto (tabela quotes, status=pending)
+- PriorityQueueSection.tsx: fila de clientes por priority_score
+- OwnerTarefasTab.tsx: tarefas do owner + delegadas, agrupadas por prioridade
+- OwnerEquipeTab.tsx: cards por colaborador, tarefas atrasadas, delegação
+- ProfileHubContent.tsx: perfil com KPIs de tarefas (sem gamificação por enquanto)
+- EvolutionEmbed.tsx: performance, comissão/nível, campanhas, regras
+
+### Hooks criados
+- useTasksData: tasks com JOIN clients, filtro por role (owner vê tudo)
+- useSellersData: sellers ativos (.eq('active', true))
+- useEvolutionData: vendas + tarefas por mês, dailyActivities por dia
+- useProfileData: dados do seller + KPIs de tarefas
+- useWorkingDaysTargets: métricas de vendas e tarefas do mês
+- useActionCenterData: alertas (tarefas atrasadas, clientes sem pedido)
+- useDailyFocus: foco diário (localStorage, tabela daily_focus futura)
+- useTaskLimits: limites de tarefas por departamento (defaults hardcoded)
+- useCriticalBlocker: bloqueio de tarefas críticas (snooze 3h)
+- useCoinsAndMedals: placeholder (tabelas de gamificação futuras)

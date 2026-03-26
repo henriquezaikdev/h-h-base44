@@ -23,7 +23,10 @@
 - Backend: Supabase (PostgreSQL + Edge Functions + Auth)
 - IA: Anthropic API (claude-sonnet-4-20250514)
 - Deploy: Vercel
-- NF-e: Focus NFe (homologação ativa, token na tabela fiscal_config)
+- NF-e: Focus NFe (produção ativa, token na tabela fiscal_config)
+- Dev: Claude Code (terminal Mac)
+- Versionamento: GitHub (repositório privado)
+- Domínio futuro: hhcontrol.com.br
 
 ## DESIGN SYSTEM — CLINICAL PREMIUM
 - Fonte: DM Sans
@@ -36,16 +39,20 @@
 
 ## PADRÕES DE ENGENHARIA
 - Hook padrão de queries: useSupabaseQuery em src/hooks/useSupabaseQuery.ts
+- Hooks Meu Dia: useTasksData, useSellersData, useEvolutionData, useProfileData, useWorkingDaysTargets, useActionCenterData, useDailyFocus, useTaskLimits, useCriticalBlocker
 - RLS via função auth_company_id() SECURITY DEFINER
 - Multi-tenant obrigatório: company_id em todas as tabelas e inserts
 - Nomes de colunas: sempre usar EXATAMENTE os nomes definidos no BANCO.md
+- Enum task_status: valores válidos são open, done, cancelled (NÃO completed, NÃO concluida, NÃO pendente)
+- Timezone: created_at/done_at vêm em UTC do Supabase — converter para BRT (UTC-3) antes de extrair datas
+- Formato Supabase: timestamps podem vir com espaço em vez de T (ex: "2026-03-03 15:43:49+00") — usar .replace(' ', 'T') antes de new Date()
 - Zero paginação complexa
 - Não recriar hooks existentes
 - Não quebrar módulos já funcionando
 - IA sugere e preenche — nunca executa ação invisível
 
 ## PERFIS DE USUÁRIO
-- owner (Henrique): OwnerMeuDia — visão geral, equipe, vendas
+- owner (Henrique): OwnerMeuDia — 5 abas: Vendas, Tarefas, Equipe, Perfil, Evolução
 - vendedor: ActionCenter — CRM, metas, fila de clientes
 - financeiro (Anna): AdminMeuDia — tarefas, compras, financeiro
 - logistica (Adriana): LogisticaMeuDia — tarefas, estoque, entregas
@@ -69,7 +76,7 @@
   - CFOP automático 5102/6102 por UF
   - verify_jwt = false nas Edge Functions (emitir-nfe, consultar-nfe, download-danfe)
 - Migração de dados (Lovable → hh-controle-2)
-  - sellers: 12 registros
+  - sellers: 12 registros (sellers duplicados desativados com active=false)
   - product_categories: 15 registros
   - clients: 1.107 registros
   - products: 3.115 registros
@@ -79,6 +86,20 @@
   - FKs order_items sem recriar (dados órfãos — não impacta operação)
 - Pedidos (duas abas: Orçamentos e Pedidos, modal completo com 5 seções)
 - Parcelamento no modal de pedidos (PaymentSection.tsx compartilhado, due_dates jsonb)
+- OwnerMeuDia completo com 5 abas (Vendas, Tarefas, Equipe, Perfil, Evolução)
+  - Aba Vendas: ClickableScoreboard, DailyFocusBlock, TaskPrioritySection, OpenQuotesCard, PriorityQueueSection
+  - Aba Tarefas: OwnerTarefasTab (minhas tarefas + delegadas, agrupadas por prioridade)
+  - Aba Equipe: OwnerEquipeTab (cards por colaborador, tarefas atrasadas, delegação)
+  - Aba Perfil: ProfileHubContent (avatar, KPIs, tabs visão geral/métricas)
+  - Aba Evolução: EvolutionEmbed (performance, comissão/nível, campanhas, regras)
+- Componentes UI (20 componentes shadcn/ui: Button, Card, Badge, Tabs, Dialog, Avatar, Progress, etc.)
+- QueryClientProvider configurado no App.tsx (TanStack React Query)
+
+## CONTA AZUL
+- Renovação expira em 14/05/2026 — sistema novo precisa estar operacional antes
+- Única função crítica: emissão de NF-e (já substituída pelo Focus NFe)
+- Após expiração: H&H Control é a fonte da verdade para tudo
+- Sync de dados do Conta Azul: produtos, estoque, pedidos (módulo futuro se necessário)
 
 ## REGRAS DE USO DA IA
 1. Todo chat novo começa com CORE.md + BANCO.md
@@ -112,21 +133,54 @@ TAREFA:
 - Para editar arquivos: sempre passar instrução em linguagem natural para o Claude Code executar
 - Para rodar comandos de terminal: o usuário usa o terminal do Mac separadamente
 
+## FASE 1 — MVP (prazo 14/05/2026)
+Módulos pendentes:
+- Assistente IA comercial na ficha do cliente (Edge Function assistente-cliente)
+- Fila inteligente de prioridades (score calculado no backend)
+- Radar da carteira (anéis: ativo, recompra, atraso, risco)
+- Bipagem QR Code na saída do pedido
+- Entrada de NF por XML com geração de contas a pagar
+- Mural social + Stories (tabelas hh_mural_posts, hh_status_posts a criar)
+- Kanban de clientes inativos
+
+## FASE 2 (maio-julho 2026)
+- IA Central (multi-modelo: Claude/GPT/Gemini por custo)
+- RH (registro de funcionários, férias, ponto)
+- Portal do cliente (histórico, status, NFs para download)
+- Gamificação completa (XP, HCoins, níveis, loja)
+- WhatsApp opt-in
+
+## FASE 3 (agosto 2026+)
+- SaaS multi-tenant (company_id + RLS já prontos)
+- Onboarding automatizado para novos clientes
+- Billing Stripe (planos, cobrança recorrente, trial)
+- Primeiros clientes externos distribuidoras B2B
+
 ## STATUS ATUAL
 Data: 26/03/2026
 Último concluído:
-- CLAUDE.md reescrito com identidade completa, regras, módulos, fases, design system
-- CONTEXT/DECISOES.md criado (decisões organizadas por categoria)
-- CONTEXT/PESSOAS.md criado (6 perfis de usuário)
-- CONTEXT/CORE.md e CONTEXT/BANCO.md atualizados com status da sessão
-- Checklist de Qualidade Visual adicionado ao CLAUDE.md (11 categorias)
-- Checklist expandido com: formulários, tabelas/dados, feedback, acessibilidade
+- OwnerMeuDia completo com 5 abas funcionais (Vendas, Tarefas, Equipe, Perfil, Evolução)
+- 20 componentes shadcn/ui criados
+- 10 hooks de dados criados e corrigidos para schema real do banco
+- Todos os hooks corrigidos: enum task_status (open/done/cancelled), timezone UTC→BRT
+- Queries corrigidas: tabelas inexistentes removidas (work_month_config, daily_focus, app_config, seller_levels, interactions, user_medals)
+- Sellers duplicados desativados (active=false), filtro .eq('active', true) adicionado
+- Tarefas órfãs filtradas (assigned_to não nulo)
+- Gráfico de Evolução mostra Vendas + Tarefas por dia
+- PerformanceTab: card sempre visível, mensagem quando sem atividade
+- QueryClientProvider adicionado no App.tsx
+- Build TypeScript 100% limpo
 Em andamento: Correções na ficha do cliente (ClientePage.tsx)
 Próximo passo:
-- Continuar correções na ficha do cliente
+- Assistente IA comercial na ficha do cliente
+- Fila inteligente de prioridades
 - Módulos da Fase 1 pendentes (prazo 14/05/2026)
 Observações:
 - order_number é tipo text — sempre comparar com aspas simples
 - UPDATE em massa: usar SET session_replication_role = replica para bypassar RLS
 - JOIN orders → sellers é ambíguo (duas FKs) — usar query separada
 - RLS sellers: nunca subquery direto na policy — usar get_my_company_id()
+- Tabelas sellers: coluna active (boolean, default true) adicionada para controlar duplicados
+- useDailyFocus usa localStorage como fallback (tabela daily_focus ainda não existe)
+- useTaskLimits usa defaults hardcoded (tabela app_config ainda não existe)
+- Gamificação (XP, HCoins, medalhas): tabelas ainda não existem — componentes mostram placeholders

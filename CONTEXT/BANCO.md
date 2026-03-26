@@ -326,7 +326,7 @@ Nunca traduzir nomes automaticamente.
 | priority | text (baixa, normal, alta, urgente) |
 | due_date | date |
 | done_at | timestamptz |
-| status | text (open, completed, cancelled) |
+| status | enum task_status (open, done, cancelled) |
 | is_recurring | boolean |
 | created_at | timestamptz |
 | updated_at | timestamptz |
