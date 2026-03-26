@@ -135,9 +135,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         if (cancelled) return
         console.log('[Auth] initSession:catch', e instanceof Error ? e.message : e)
-        clearTimeout(safetyTimer)
-        // Não faz signOut — pode ser só timeout de rede. Desbloqueia o loading.
-        if (!cancelled) setState({ user: null, seller: null, isLoading: false })
+        // Não desbloqueia loading aqui — deixa o onAuthStateChange resolver.
+        // O safety timer de 15s garante que nunca fica preso.
+        // Isso evita setar user=null quando SIGNED_IN já está em andamento.
       }
     }
 
