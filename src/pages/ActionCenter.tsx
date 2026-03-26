@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { useSellersData } from '@/hooks/useSellersData'
@@ -12,6 +12,39 @@ import { Loader2, Search, Plus } from 'lucide-react'
 import { format, isBefore, startOfDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
+
+// Error boundary to catch runtime crashes
+class MeuDiaErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props)
+    this.state = { hasError: false, error: null }
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error }
+  }
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('[MeuDia] Runtime crash:', error, info.componentStack)
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <p className="text-destructive font-medium">Erro ao carregar Meu Dia</p>
+          <p className="text-sm text-muted-foreground max-w-md text-center">
+            {this.state.error?.message}
+          </p>
+          <button className="btn-primary" onClick={() => window.location.reload()}>
+            Recarregar
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 type VendedorTab = 'meu-dia' | 'tarefas' | 'perfil' | 'evolucao'
 
@@ -145,7 +178,11 @@ export default function ActionCenter() {
       </div>
     )
 
-    return <OwnerMeuDia renderVendasTab={renderVendasTab} />
+    return (
+      <MeuDiaErrorBoundary>
+        <OwnerMeuDia renderVendasTab={renderVendasTab} />
+      </MeuDiaErrorBoundary>
+    )
   }
 
   // Vendedor view with 4 tabs
@@ -161,6 +198,7 @@ export default function ActionCenter() {
   const overdueTasks = pendingTasks.filter((t) => isBefore(new Date(t.taskDate), today))
 
   return (
+    <MeuDiaErrorBoundary>
     <div className="min-h-screen bg-background">
       <div className="flex items-center px-8 pt-6 border-b border-border" style={{ gap: '24px' }}>
         {vendedorTabs.map(tab => {
@@ -212,5 +250,6 @@ export default function ActionCenter() {
         {vendedorTab === 'evolucao' && <EvolutionEmbed />}
       </div>
     </div>
+    </MeuDiaErrorBoundary>
   )
 }

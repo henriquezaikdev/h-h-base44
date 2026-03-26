@@ -162,8 +162,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return
         }
 
-        // INITIAL_SESSION já foi tratado por initSession()
-        if (event === 'INITIAL_SESSION') return
+        // INITIAL_SESSION: tratar aqui também para robustez
+        // (initSession pode ter dado timeout antes de completar)
+        if (event === 'INITIAL_SESSION') {
+          if (session?.user) {
+            const usr = session.user
+            const slr = await fetchSeller(usr.id)
+            console.log('[Auth] INITIAL_SESSION: seller=', slr ? slr.name : 'null')
+            if (!cancelled) {
+              clearTimeout(safetyTimer)
+              setState({ user: usr, seller: slr, isLoading: false })
+            }
+          } else {
+            if (!cancelled) {
+              clearTimeout(safetyTimer)
+              setState({ user: null, seller: null, isLoading: false })
+            }
+          }
+          return
+        }
 
         // Deslogado ou sessão encerrada — garante limpeza do storage
         if (event === 'SIGNED_OUT' || !session) {
