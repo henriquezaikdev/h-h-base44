@@ -1,0 +1,14 @@
+[functions.emitir-nfe]
+verify_jwt = false
+
+[functions.consultar-nfe]
+verify_jwt = false
+
+[functions.download-danfe]
+verify_jwt = false
+
+[functions.get-danfe-url]
+verify_jwt = false
+
+[functions.assistente-cliente]
+verify_jwt = false
