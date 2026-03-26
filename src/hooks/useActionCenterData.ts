@@ -1,8 +1,7 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { fetchAllPaginated } from '@/lib/paginatedQuery';
-import { startOfMonth, subMonths, format, subDays, startOfWeek } from 'date-fns';
+import { startOfMonth, subMonths, format, subDays } from 'date-fns';
 import {
   saoPauloDayKey,
   saoPauloDayRange,
@@ -10,7 +9,6 @@ import {
   isEffectiveWhatsapp
 } from '@/lib/metricsService';
 import { cancelPendingInvalidation } from '@/lib/realtimeUtils';
-import { calculateDaysSinceDate } from '@/lib/utils';
 
 export interface CriticalAlert {
   id: string;
@@ -73,8 +71,7 @@ interface ActionCenterData {
 async function fetchActionCenterData(sellerId: string): Promise<ActionCenterData> {
   const now = new Date();
   const today = now;
-  const { dayKey: todayStr } = saoPauloDayRange(now);
-  const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+  const todayStr = saoPauloDayKey(now);
 
   // Parallel fetch: clients + daily score data
   const [clientsResult, todayInteractionsResult, todayTasksCompletedResult, todayOrdersResult, dailyGoalResult] = await Promise.all([
@@ -87,7 +84,7 @@ async function fetchActionCenterData(sellerId: string): Promise<ActionCenterData
       .from('interactions')
       .select('interaction_type')
       .eq('responsible_seller_id', sellerId)
-      .eq('interaction_date', saoPauloDayRange(now).dayKey),
+      .eq('interaction_date', saoPauloDayKey(now)),
     supabase
       .from('tasks')
       .select('contact_type')
@@ -100,7 +97,7 @@ async function fetchActionCenterData(sellerId: string): Promise<ActionCenterData
       .select('total')
       .eq('seller_id', sellerId)
       .eq('is_accountable', true)
-      .eq('order_date', saoPauloDayRange(now).dayKey),
+      .eq('order_date', saoPauloDayKey(now)),
     supabase
       .from('daily_goals')
       .select('contacts_target')
@@ -189,8 +186,7 @@ async function fetchActionCenterData(sellerId: string): Promise<ActionCenterData
       : null;
 
     // Dynamic calculation from last_order_date - always accurate
-    const daysSinceOrder = calculateDaysSinceDate(client.last_order_date);
-    const isRecurrent = client.classification === 'recorrente';
+    const daysSinceOrder = client.last_order_date ? Math.floor((today.getTime() - new Date(client.last_order_date).getTime()) / (1000 * 60 * 60 * 24)) : null;
     const isTop = ['top20', 'top100'].includes(client.ranking_tier || '');
 
     // Check revenue drop
@@ -310,7 +306,7 @@ async function fetchActionCenterData(sellerId: string): Promise<ActionCenterData
           companyName: client.company_name,
           tier: client.ranking_tier || 'geral',
           lastOrderDate: client.last_order_date,
-          daysSinceOrder: calculateDaysSinceDate(client.last_order_date),
+          daysSinceOrder: client.last_order_date ? Math.floor((today.getTime() - new Date(client.last_order_date).getTime()) / (1000 * 60 * 60 * 24)) : null,
           lastContactDate: lastContactMap.get(client.id) || null,
           daysSinceContact: null,
           reason: 'Retorno vencido',
@@ -382,8 +378,6 @@ async function fetchActionCenterData(sellerId: string): Promise<ActionCenterData
  * refetch desnecessario ao remontar componentes ou trocar abas.
  */
 export function useActionCenterData(sellerId?: string | null) {
-  const queryClient = useQueryClient();
-
   const query = useQuery<ActionCenterData>({
     queryKey: ['actionCenter', sellerId],
     queryFn: () => fetchActionCenterData(sellerId!),

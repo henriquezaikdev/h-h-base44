@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useTasksData, TaskData } from '@/hooks/useTasksData';
+import { useTasksData } from '@/hooks/useTasksData';
+import type { TaskData } from '@/hooks/useTasksData';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { format, isToday, isBefore, startOfDay } from 'date-fns';

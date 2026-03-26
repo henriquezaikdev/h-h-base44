@@ -9,9 +9,8 @@ import {
 } from '@/lib/metricsService';
 import {
   LEVEL_MONTHLY_TARGETS,
-  SellerLevel,
-  getWorkDaysConfig as getWorkDaysConfigService
 } from '@/lib/sellerMetaService';
+import type { SellerLevel } from '@/lib/sellerMetaService';
 import { cancelPendingInvalidation } from '@/lib/realtimeUtils';
 
 interface SellerTargets {

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import { useSellersData } from '@/hooks/useSellersData'
@@ -7,7 +7,6 @@ import { OwnerTarefasTab } from '@/components/meu-dia/OwnerTarefasTab'
 import { OwnerEquipeTab } from '@/components/meu-dia/OwnerEquipeTab'
 import { ProfileHubContent } from '@/components/profile/ProfileHubContent'
 import { EvolutionEmbed } from '@/components/meu-dia/EvolutionEmbed'
-import { Loader2 } from 'lucide-react'
 import { isBefore, startOfDay } from 'date-fns'
 
 type OwnerTab = 'vendas' | 'tarefas' | 'equipe' | 'perfil' | 'evolucao'

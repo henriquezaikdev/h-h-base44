@@ -1,7 +1,9 @@
 import { useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useActionCenterData, CriticalAlert } from '@/hooks/useActionCenterData';
-import { useTasksData, TaskData } from '@/hooks/useTasksData';
+import { useActionCenterData } from '@/hooks/useActionCenterData';
+import type { CriticalAlert } from '@/hooks/useActionCenterData';
+import { useTasksData } from '@/hooks/useTasksData';
+import type { TaskData } from '@/hooks/useTasksData';
 import { useWorkingDaysTargets } from '@/hooks/useWorkingDaysTargets';
 import { useDailyFocus } from '@/hooks/useDailyFocus';
 import { useCriticalBlocker } from '@/hooks/useCriticalBlocker';
@@ -41,7 +43,7 @@ export function ActionCenterVendedor({
   effectiveSellerId, sellerId, isAdminOrOwner, isOwner = false, debugEnabled,
   contactFilter, searchTerm,
   onSetTaskModalOpen, onSetPlanningModalOpen, onSetConfigModalOpen,
-  onSetSelectedTask, onSetAlertDetailsType,
+  onSetSelectedTask, onSetAlertDetailsType: _onSetAlertDetailsType,
   onSetCallsReportModalOpen, onSetWhatsappReportModalOpen, onSetContactFilter,
 }: Props) {
   const navigate = useNavigate();

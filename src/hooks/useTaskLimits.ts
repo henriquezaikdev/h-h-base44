@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useSellerDepartment } from '@/hooks/useSellerDepartment';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import type { TaskData } from '@/hooks/useTasksData';
 
@@ -27,7 +27,8 @@ function useTaskLimitsConfig() {
 }
 
 export function useTaskLimits(tasks: TaskData[], sellerId: string | null) {
-  const { department } = useSellerDepartment();
+  const { seller } = useAuth();
+  const department = seller?.department;
   const { data: configLimits } = useTaskLimitsConfig();
 
   return useMemo(() => {

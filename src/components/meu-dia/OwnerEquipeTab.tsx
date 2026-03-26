@@ -54,7 +54,7 @@ function MetricCard({ label, value, color = 'neutral' }: { label: string; value:
   );
 }
 
-function OwnerMedalHistory({ sellers, sellerMap }: { sellers: SellerRow[]; sellerMap: Record<string, SellerRow> }) {
+function OwnerMedalHistory({ sellers: _sellers, sellerMap }: { sellers: SellerRow[]; sellerMap: Record<string, SellerRow> }) {
   const [medals, setMedals] = useState<Array<{
     id: string;
     user_id: string;
@@ -76,7 +76,7 @@ function OwnerMedalHistory({ sellers, sellerMap }: { sellers: SellerRow[]; selle
           .gte('earned_at', '2026-01-01T00:00:00')
           .order('earned_at', { ascending: false });
         if (error) throw error;
-        setMedals((data as typeof medals) || []);
+        setMedals((data as unknown as typeof medals) || []);
       } catch (err) {
         console.error('Error fetching medal history:', err);
       } finally {

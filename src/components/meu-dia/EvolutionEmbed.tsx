@@ -4,7 +4,6 @@ import { Bird, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PerformanceTab } from '@/components/evolution/PerformanceTab';
@@ -36,8 +35,8 @@ export function EvolutionEmbed() {
   const {
     level, errors, dailyActivities, salesByMargin,
     currentMonthSales, currentMonthCalls, currentMonthWhatsapp,
-    workDaysInMonth, workDaysPassed, previousMonthMet,
-    loading, refetch,
+    workDaysInMonth, workDaysPassed, previousMonthMet: _previousMonthMet,
+    loading, refetch: _refetch,
   } = useEvolutionData(selectedSellerId, selectedMonth, selectedYear);
 
   const handlePreviousMonth = () => setSelectedDate(prev => subMonths(prev, 1));

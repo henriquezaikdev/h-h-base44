@@ -36,7 +36,8 @@ function isSnoozed(): boolean {
 }
 
 export function useCriticalBlocker() {
-  const { seller, isOwner } = useAuth();
+  const { seller, role } = useAuth();
+  const isOwner = role === 'owner';
   const [criticalTasks, setCriticalTasks] = useState<CriticalTask[]>([]);
   const [snoozed, setSnoozed] = useState(isSnoozed());
   const [loading, setLoading] = useState(true);

@@ -8,7 +8,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import { TaskData } from '@/hooks/useTasksData';
+import type { TaskData } from '@/hooks/useTasksData';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface TaskPrioritySectionProps {

@@ -134,7 +134,7 @@ async function fetchEvolutionData(sellerId: string, month: number, year: number)
   // ==================================================================
   // UNIFICAÇÃO: Buscar TAREFAS CONCLUÍDAS do mês (igual ao Meu Dia)
   // ==================================================================
-  const tasksData = await fetchAllPaginated<{ contact_type: string; completed_at: string; created_by_seller_id: string; client: { seller_id: string } | null }>(() =>
+  const tasksData = await fetchAllPaginated<{ contact_type: string; completed_at: string; created_by_seller_id: string; client: { seller_id: string }[] }>(() =>
     supabase
       .from('tasks')
       .select('contact_type, completed_at, created_by_seller_id, client:clients!tasks_client_id_fkey(seller_id)')
