@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { AuthProvider } from './components/AuthProvider'
 import PrivateRoute from './components/layout/PrivateRoute'
@@ -16,8 +17,19 @@ import EstoquePage from './pages/stock/EstoquePage'
 import TarefasPage from './pages/tasks/TarefasPage'
 import ActionCenter from './pages/ActionCenter'
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 1000 * 60 * 2, // 2 minutes
+    },
+  },
+})
+
 export default function App() {
   return (
+    <QueryClientProvider client={queryClient}>
     <AuthProvider>
     <BrowserRouter>
       <Routes>
@@ -47,5 +59,6 @@ export default function App() {
       </Routes>
     </BrowserRouter>
     </AuthProvider>
+    </QueryClientProvider>
   )
 }
