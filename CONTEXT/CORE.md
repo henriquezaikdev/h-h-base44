@@ -160,16 +160,14 @@ Módulos pendentes:
 Data: 27/03/2026
 
 Último concluído:
-- Etapa C completa: Fila de Prioridades, Radar da Carteira, Assistente IA
-- Etapa E completa: GitHub + Vercel (hh-control-2.vercel.app)
-- Mural Social completo (commit 0e49dd0)
-- Logins da equipe criados e vinculados no Supabase Auth:
-  - Adriana: adrianahhcontrol@gmail.com
-  - Anna: financeirohhntoners@gmail.com
-  - Cláudio: 7sabugos@gmail.com
-  - Joésio: vendashh02@gmail.com
-  - Murilo: vendashh01@gmail.com
-  - Nayara: cartuchogratis10@gmail.com
+- Etapa C completa: PriorityQueueSection, RadarCarteira, AssistenteCliente (ClientAIChat)
+- ANTHROPIC_API_KEY cadastrada nos secrets do Supabase
+- Etapa E completa: GitHub (henriquezaikdev/hh-control-2) + Vercel (hh-control-2.vercel.app)
+- Mural Social completo: MuralPage + MuralWidget + rota /mural + sidebar (commit 0e49dd0)
+- Logins da equipe criados e vinculados no Supabase Auth (7 usuários)
+- PLANEJAMENTO.md substituído pelo planejamento completo revisado (leitura do código Lovable)
+- enum client_status mapeado: active, reorder, delayed, at_risk, inactive
+- priority_score calculado e gravado em clients
 
 Em andamento:
 - Aba Campanhas no EvolutionEmbed — placeholder (tabelas não criadas)
@@ -177,9 +175,18 @@ Em andamento:
 - interactions vazia — depende de registro via sistema
 
 Próximo passo:
-1. Equipe acessa o sistema e valida os cockpits
-2. Kanban de clientes inativos (Etapa D)
-3. Bipagem QR Code na saída do pedido (Etapa D)
+1. Bloco 1 — Identificação de clientes:
+   - Verificar campo reativado_em e valores de clients.origem no SQL Editor
+   - Badge de identificação na ClientesPage
+   - Kanban de clientes inativos (/clientes/inativos)
+2. Bloco 2 — Configurações (/configuracoes)
+
+Observações:
+- Código do Lovable lido na íntegra: Settings.tsx, Gestor.tsx, Relatorios.tsx, Goals.tsx
+- Novas telas mapeadas: Configurações, Gestor, Relatórios, Kanban Inativos, Entregador Online
+- Bloco 5 (Entregador Online): token 0c2d25e5e97e051ab56c67dc864e3dd3bf883b7d, clienteId 5066
+- Edge Functions necessárias antes de Settings: invite-user, reset-user-password
+- Tabelas a criar antes de Settings: app_config, monthly_goals (verificar se existem)
 
 Observações:
 - commission_pct em order_items: 100% zerado — irrelevante, comissão usa margem_real
