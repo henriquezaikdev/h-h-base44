@@ -335,3 +335,47 @@ Esse contexto é importante para entender por que certas decisões de arquitetur
 ### Duplicatas resolvidas
 - xp_log → tabela padrão (usar sempre esta)
 - xp_logs → ignorar (vazia, não remover para não quebrar queries existentes)
+
+## NOVOS MÓDULOS — DECISÕES DE ESCOPO (27/03/2026)
+
+### Bloco 1 — Identificação de Clientes
+- Badge de identificação: novo (≤30d) | inativo | reativado | indicação
+- Campo `origem` em clients já existe — usar para 'indicacao'
+- Kanban inativos: rota /clientes/inativos, 4 colunas (Sem contato >60d | Contatado | Proposta | Reativado)
+- Ao reativar cliente: clients.status = 'active'
+
+### Bloco 2 — Configurações (/configuracoes — somente owner)
+- Referência: Settings.tsx do Lovable (lido em 27/03/2026)
+- 5 abas: Empresa, Usuários, Metas, Fiscal, Equivalências
+- Logo da empresa: Supabase Storage + app_config key='logo_url'
+- Edge Functions obrigatórias ANTES de construir: invite-user, reset-user-password
+- Tabelas a verificar/criar antes: app_config, monthly_goals, hh_produto_equivalencia
+- Tokens Focus NFe: nunca exibir em texto claro — máscara tipo senha
+
+### Bloco 3 — Tela do Gestor (/gestor — somente owner)
+- Referência: Gestor.tsx do Lovable (lido em 27/03/2026)
+- INCLUIR: dados comerciais, financeiro lançado manualmente, relatório IA
+- EXCLUIR: CEE/custos da empresa, RH/Genyo, Conta Azul
+- 4 abas: Visão Executiva, Comercial (5 sub-abas), Financeiro, Relatório IA
+- Edge Function `gestor-ia-report` do Lovable: deployar no 2.0 antes de construir a aba
+
+### Bloco 4 — Relatórios (/relatorios)
+- Referência: Relatorios.tsx do Lovable (lido em 27/03/2026)
+- 3 abas: Vendas & Clientes, Comissões, Novos & Reativados
+- Filtro de período + filtro por vendedor (owner vê todos, seller vê carteira)
+- Exportação CSV em todas as abas
+- Sem backend dedicado — calcular direto dos orders
+
+### Bloco 5 — Entregador Online Sync
+- API: https://api.entregadoronline.com/api/Destinos/Buscar
+- Token: 0c2d25e5e97e051ab56c67dc864e3dd3bf883b7d | clienteId: 5066
+- Vinculação: entregas_eo.controle_pedido = orders.order_number
+- Pré-requisitos: app_config + fin_sync_logs (verificar colunas) + colunas extras em entregas_eo
+- Cron: a cada 2h via Supabase Database → Cron Jobs
+
+### monthly_goals — esquema aprovado
+- Tabela a criar se não existir
+- Campos: seller_id, month, year, sales_target, sales_achieved, calls_target,
+  call_attempts_target, whatsapp_response_target, whatsapp_no_response_target, scope
+- scope: 'global' (toda a loja) ou 'individual' (por vendedor)
+- Botão "Replicar" na UI: copia meta para o mês seguinte
