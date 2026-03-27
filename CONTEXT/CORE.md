@@ -160,10 +160,10 @@ Módulos pendentes:
 Data: 27/03/2026
 
 Último concluído:
-- priority_score calculado e gravado em clients (SQL rodado no Supabase)
-- Enum client_status mapeado: active, reorder, delayed, at_risk, inactive
-- PriorityQueueSection.tsx criado (196 linhas) — fila de prioridades por score
-- PriorityQueueSection integrado no VendedorMeuDia.tsx aba Meu Dia
+- priority_score calculado e gravado em clients (enum client_status mapeado: active, reorder, delayed, at_risk, inactive)
+- PriorityQueueSection.tsx criado e integrado no VendedorMeuDia aba Meu Dia
+- RadarCarteira.tsx criado e integrado no VendedorMeuDia aba Meu Dia (452 linhas)
+  - KPIs em linha, SVG com dots nos anéis, tabs de filtro, lista com borda colorida
 
 Em andamento:
 - Aba Campanhas no EvolutionEmbed — placeholder (tabelas não criadas)
@@ -171,9 +171,9 @@ Em andamento:
 - interactions vazia — contatos reais dependem de registro via sistema
 
 Próximo passo:
-1. Radar da Carteira (anéis: ativo/recompra/atraso/risco) — Etapa C, item 2
-2. Assistente IA na ficha do cliente (Edge Function já criada)
-3. Deploy Vercel + GitHub
+1. Assistente IA na ficha do cliente (Edge Function assistente-cliente já deployada)
+2. Deploy Vercel + GitHub
+3. Mural social (tabela mural_posts já existe no banco)
 
 Observações:
 - commission_pct em order_items: 100% zerado — irrelevante, comissão usa margem_real
