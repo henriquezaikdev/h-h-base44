@@ -160,12 +160,12 @@ Módulos pendentes:
 Data: 27/03/2026
 
 Último concluído:
-- Etapa C — Inteligência Comercial completa (Fila, Radar, Assistente IA)
-- Etapa E — Deploy concluído:
-  - Repositório GitHub: henriquezaikdev/hh-control-2 (privado)
-  - Deploy Vercel: hh-control-2.vercel.app (funcionando)
-  - Variáveis de ambiente configuradas (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY)
-  - Login testado e funcionando em produção
+- Etapa C completa: Fila de Prioridades, Radar da Carteira, Assistente IA
+- Etapa E completa: GitHub (henriquezaikdev/hh-control-2) + Vercel (hh-control-2.vercel.app)
+- Mural Social completo (771 linhas, commit 0e49dd0):
+  - MuralPage.tsx: feed, stories, reações, comentários, modal de publicação
+  - MuralWidget.tsx: widget compacto nos cockpits Owner e Vendedor
+  - Rota /mural + sidebar para todos os perfis
 
 Em andamento:
 - Aba Campanhas no EvolutionEmbed — placeholder (tabelas não criadas)
@@ -173,9 +173,9 @@ Em andamento:
 - interactions vazia — depende de registro via sistema
 
 Próximo passo:
-1. Criar logins para a equipe (Anna, Adriana, Joésio, Murilo, Nayara, Cláudio) no Supabase Auth
-2. Mural social — Etapa D (tabela mural_posts já existe)
-3. Kanban de clientes inativos — Etapa D
+1. Criar logins da equipe no Supabase Auth
+2. Kanban de clientes inativos (Etapa D)
+3. Bipagem QR Code na saída do pedido (Etapa D)
 
 Observações:
 - commission_pct em order_items: 100% zerado — irrelevante, comissão usa margem_real

@@ -116,13 +116,13 @@ Nunca construir componente que depende de tabela inexistente.
 - [x] VendedorMeuDia completo
 - [x] EvolutionEmbed com dados reais (Performance + Comissão & Nível)
 
-#### Etapa C — Inteligência Comercial (EM ANDAMENTO)
-- [ ] Fila inteligente de prioridades (priority_score calculado)
-- [ ] Radar da Carteira (anéis: ativo/recompra/atraso/risco)
-- [ ] Assistente IA na ficha do cliente (Edge Function já criada)
+#### Etapa C — Inteligência Comercial (CONCLUÍDA em 27/03/2026)
+- [x] Fila inteligente de prioridades (PriorityQueueSection.tsx)
+- [x] Radar da Carteira (RadarCarteira.tsx — SVG com dots nos anéis)
+- [x] Assistente IA na ficha do cliente (ClientAIChat.tsx + Edge Function)
 
-#### Etapa D — Operações (PENDENTE)
-- [ ] Mural social (tabela mural_posts existe)
+#### Etapa D — Operações (EM ANDAMENTO)
+- [x] Mural social (MuralPage.tsx + MuralWidget.tsx — commit 0e49dd0)
 - [ ] Kanban de clientes inativos
 - [ ] Bipagem QR Code na saída do pedido
 - [ ] Entrada NF-e XML → contas a pagar automático
