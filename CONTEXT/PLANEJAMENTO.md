@@ -1,377 +1,359 @@
-# H&H CONTROL 2.0 — PLANEJAMENTO GERAL
-Gerado em: 27/03/2026
-Prazo final MVP: 14/05/2026
+# H&H CONTROL 2.0 — PLANEJAMENTO COMPLETO REVISADO
+Gerado em: 27/03/2026 | Prazo MVP: 14/05/2026
 
 ---
 
-## 1. MAPA DE STATUS DOS MÓDULOS
+## REGRAS DE EXECUÇÃO (NÃO NEGOCIÁVEIS)
+
+1. Banco primeiro, tela depois — nunca construir componente sem tabela existir
+2. Um arquivo por vez — confirmar build limpo antes de passar para o próximo
+3. Nunca recriar hooks existentes
+4. Nunca quebrar módulos funcionando
+5. Multi-tenant obrigatório: company_id em todos os inserts
+6. Zero framer-motion, zero tokens shadcn, zero emojis na UI
+7. Sempre ler CORE.md + BANCO.md no início de cada sessão
+
+---
+
+## STATUS ATUAL DOS MÓDULOS (27/03/2026)
 
 ### CONCLUÍDOS E FUNCIONANDO
 
 | Módulo | Arquivo principal | Observação |
 |---|---|---|
-| Login + Auth | LoginPage.tsx, AuthProvider.tsx | Roteamento por perfil funcionando |
-| Sidebar por perfil | AppLayout.tsx | Itens diferentes por role/department |
-| Clientes | ClientesPage.tsx, ClientePage.tsx | CNPJ BrasilAPI + CEP ViaCEP |
-| Produtos | ProdutosPage.tsx | Com campo NCM |
+| Login + Auth + Sidebar | LoginPage.tsx, AuthProvider.tsx, AppLayout.tsx | Roteamento por perfil |
+| Clientes | ClientesPage.tsx, ClientePage.tsx | CNPJ + CEP, ficha completa |
+| Produtos | ProdutosPage.tsx | Com NCM |
 | Compras | ComprasPage.tsx | Kanban + cotação + fornecedores |
-| Estoque | EstoquePage.tsx | Posição + entradas XML + alertas |
-| Financeiro | FinanceiroPage.tsx | Fluxo mensal + DRE + projeção |
-| Dashboard | DashboardPage.tsx | Por perfil |
-| Tarefas | TarefasPage.tsx | Schema dual (CRM + original) |
+| Estoque | EstoquePage.tsx | Posição + XML + alertas |
+| Financeiro | FinanceiroPage.tsx | Fluxo + DRE + projeção |
+| Tarefas | TarefasPage.tsx | Schema dual CRM |
 | NF-e | EmitirNFeButton.tsx + Edge Functions | Focus NFe produção ativa |
-| Pedidos | PedidosPage.tsx + modal | Orçamentos + Pedidos, parcelamento |
-| OwnerMeuDia | OwnerMeuDia.tsx | 5 abas: Vendas, Tarefas, Equipe, Perfil, Evolução |
-| AdminMeuDia | AdminMeuDia.tsx | Anna — 3 abas: Tarefas, Compras, Financeiro |
-| LogisticaMeuDia | LogisticaMeuDia.tsx | Adriana — 3 abas: Tarefas, Estoque, Entregas |
-| EntregadorDashboard | EntregadorDashboard.tsx | Cláudio — mobile-first, 5 abas |
-| VendedorMeuDia | VendedorMeuDia.tsx | 4 abas: Meu Dia, Tarefas, Perfil, Evolução |
-| EvolutionEmbed | EvolutionEmbed.tsx + sub-tabs | Performance, Comissão & Nível, Campanhas (placeholder), Regras |
-
-### EM ANDAMENTO / PARCIAL
-
-| Módulo | Status | Bloqueio |
-|---|---|---|
-| EvolutionEmbed — Campanhas | Placeholder | Tabelas campaigns, campaign_participants não criadas |
-| Contatos do vendedor | UI pronta (PerformanceTab) | interactions vazia — sem registro via sistema ainda |
-| Comissão base | Cálculo pronto | margem_real preenchida em apenas 34% dos pedidos (2.482/7.272) |
-| EntregadorDashboard — histórico | UI pronta | entregas_eo vazia — importação do Cláudio pendente |
-
-### PENDENTES — FASE 1 (prazo 14/05/2026)
-
-| Módulo | Prioridade | Depende de |
-|---|---|---|
-| Fila inteligente de prioridades | ALTA | priority_score em clients (coluna existe) |
-| Radar da Carteira | ALTA | orders + clients (dados existem) |
-| Assistente IA comercial (ficha do cliente) | ALTA | Edge Function assistente-cliente (criada) |
-| Deploy Vercel + GitHub | ALTA | build limpo (já ok) |
-| Mural social | MÉDIA | mural_posts (tabela existe no banco) |
-| Kanban de clientes inativos | MÉDIA | clients (dados existem) |
-| Bipagem QR Code | MÉDIA | pedidos aprovados (dados existem) |
-| Entrada NF-e XML → contas a pagar | BAIXA | fin_payables (tabela existe) |
+| Pedidos | PedidosPage.tsx + modal | Orçamentos + Pedidos + parcelamento |
+| OwnerMeuDia | OwnerMeuDia.tsx | 5 abas completas |
+| AdminMeuDia | AdminMeuDia.tsx | Anna — 3 abas |
+| LogisticaMeuDia | LogisticaMeuDia.tsx | Adriana — 3 abas |
+| EntregadorDashboard | EntregadorDashboard.tsx | Cláudio — mobile-first |
+| VendedorMeuDia | VendedorMeuDia.tsx | 4 abas + PriorityQueue + Radar + IA |
+| EvolutionEmbed | EvolutionEmbed.tsx | Performance + Comissão + Regras |
+| Mural Social | MuralPage.tsx + MuralWidget.tsx | Feed + Stories + Reações |
+| Deploy | Vercel + GitHub | hh-control-2.vercel.app |
+| Logins da equipe | Supabase Auth | 7 usuários vinculados |
 
 ---
 
-## 2. MAPA DE DEPENDÊNCIAS — EVOLUÇÃO DO VENDEDOR
+## SEQUÊNCIA DE CONSTRUÇÃO — MVP ATÉ 14/05/2026
 
-```
-seller_levels ──────────────────► metaMensal, metaLigacoes, metaWhatsapp, TBM
-     │                            nível atual (ovo/pena/águia), bônus de nível
-     └── monthly_sales_target ──► aceleracaoAtiva (vendas >= 130% da meta)
+### PRÉ-REQUISITO: SQL no banco antes de qualquer tela nova
 
-orders ──────────────────────────► currentMonthSales, currentMonthOrderCount
-     │                             dailyActivities (gráfico)
-     └── margem_real ─────────────► comissaoBase (por faixa de margem)
-                                   ⚠️ apenas 34% dos pedidos têm margem_real preenchida
-
-order_items + products ──────────► comissaoCategorias (bônus por categoria)
-     └── product_categories ──────► matchCategory (TONERS, PAPELARIA, MERCADO, CARTUCHOS, INFORMATICA)
-
-seller_errors ───────────────────► bonusBlocked (erros >= 4 → bônus = 0)
-
-interactions ────────────────────► ligacoesMes, whatsappMes
-     └── interaction_type ────────► ligacao (Ligação, phone_call, Ligação (Tentativa))
-                                    whatsapp (WhatsApp, message, WhatsApp (Tentativa))
-     ⚠️ tabela vazia — contatos reais dependem de registro via sistema
-
-tasks ───────────────────────────► currentMonthTasksCompleted, currentMonthTasksOpen
-     └── status_crm, task_date ──► dailyActivities (tarefas por dia)
-```
-
-### Campos calculados e suas fontes
-
-| Campo | Fonte | Fallback |
-|---|---|---|
-| metaMensal | seller_levels.monthly_sales_target | 30.000 |
-| comissaoBase | orders.margem_real × faixa | 0 (sem margem_real) |
-| aceleracaoAtiva | currentMonthSales >= 1.3 × metaMensal | false |
-| ligacoesMes | interactions WHERE type IN (ligacao...) | 0 |
-| whatsappMes | interactions WHERE type IN (whatsapp...) | 0 |
-| metaLigacoes | ovo: 18×dias_úteis / pena+águia: 210 | 18×dias_úteis |
-| metaWhatsapp | ovo: 15×dias_úteis / pena+águia: 336 | 15×dias_úteis |
-| tbm | (metaMensal - vendas) / dias_úteis_restantes | 0 |
+Antes de construir Settings, Gestor ou Relatórios, verificar/criar:
+- Tabela `app_config` (key/value — necessária para Entregador Online sync e configurações gerais)
+- Tabela `monthly_goals` (metas mensais por vendedor — Goals.tsx do Lovable usa essa tabela)
+- Tabela `fin_sync_logs` com colunas corretas (entregador-online-sync usa essa tabela)
+- Edge Functions: `invite-user` e `reset-user-password` (necessárias para Settings > Usuários)
+- Edge Function: `entregador-online-sync` (necessária para sync de entregas)
 
 ---
 
-## 3. SEQUÊNCIA DE CONSTRUÇÃO — FASES
+### BLOCO 1 — IDENTIFICAÇÃO DE CLIENTES
+**Prioridade: ALTA | Depende de: clients (existe)**
 
-### Regra geral: banco primeiro, tela depois.
-Nunca construir componente que depende de tabela inexistente.
+Objetivo: mostrar visualmente se um cliente é novo, inativo, reativado ou indicação.
 
----
+**1.1 — Badge de identificação na listagem (ClientesPage.tsx)**
+- Campo `origem` já existe em `clients` mas não é exibido na UI
+- Lógica de classificação:
+  - `novo`: criado nos últimos 30 dias (created_at)
+  - `inativo`: status = inactive
+  - `reativado`: status voltou de inactive para active (campo `reativado_em` pode não existir — verificar)
+  - `indicação`: origem = 'indicacao' no campo clients.origem
+- Badge colorido ao lado do nome na listagem
+- Filtro na barra de busca por tipo de identificação
 
-### FASE 1 — MVP Operacional (até 14/05/2026)
+**1.2 — Exibição na ficha do cliente (ClientePage.tsx)**
+- Badge de identificação no cabeçalho da ficha
+- Seção "Origem" com campo editável (dropdown: Indicação, Prospecção, Google, Mailing, Outro)
+- Campo `origem` salvo em clients.origem
 
-#### Etapa A — Infraestrutura (CONCLUÍDA)
-- [x] 12 tabelas de gamificação criadas (seller_levels, seller_errors, seller_stars, interactions, etc.)
-- [x] seller_levels populado para os 3 vendedores
-- [x] work_month_config populado (mar/abr/mai 2026)
-- [x] category_goals e category_achievements criadas com RLS
-
-#### Etapa B — Cockpits (CONCLUÍDA)
-- [x] OwnerMeuDia completo
-- [x] AdminMeuDia completo
-- [x] LogisticaMeuDia completo
-- [x] EntregadorDashboard v2 completo
-- [x] VendedorMeuDia completo
-- [x] EvolutionEmbed com dados reais (Performance + Comissão & Nível)
-
-#### Etapa C — Inteligência Comercial (CONCLUÍDA em 27/03/2026)
-- [x] Fila inteligente de prioridades (PriorityQueueSection.tsx)
-- [x] Radar da Carteira (RadarCarteira.tsx — SVG com dots nos anéis)
-- [x] Assistente IA na ficha do cliente (ClientAIChat.tsx + Edge Function)
-
-#### Etapa D — Operações (EM ANDAMENTO)
-- [x] Mural social (MuralPage.tsx + MuralWidget.tsx — commit 0e49dd0)
-- [ ] Kanban de clientes inativos
-- [ ] Bipagem QR Code na saída do pedido
-- [ ] Entrada NF-e XML → contas a pagar automático
-
-#### Etapa E — Deploy (CONCLUÍDA em 27/03/2026)
-- [x] Repositório GitHub: henriquezaikdev/hh-control-2 (privado)
-- [x] Deploy Vercel: hh-control-2.vercel.app (funcionando)
-- [x] Variáveis de ambiente configuradas (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY)
-- [x] Login testado e funcionando em produção
-- [ ] Apontar domínio hhcontrol.com.br (pendente)
-- [ ] Criar logins para Anna, Adriana, Joésio, Murilo, Nayara, Cláudio no Supabase Auth
+**1.3 — Kanban de clientes inativos**
+- Rota: /clientes/inativos
+- Colunas: Sem contato (>60d) | Contatado | Proposta enviada | Reativado
+- Cada card: nome do cliente, dias sem pedido, último vendedor responsável, botão "Registrar contato"
+- Dados: clients WHERE status = 'inactive', ordenado por last_order_at ASC
+- Ao reativar: atualiza clients.status = 'active'
 
 ---
 
-### FASE 2 — Expansão (maio–julho 2026)
-- IA Central (multi-modelo: Claude/GPT/Gemini por custo)
-- RH (registro de funcionários, férias, ponto)
-- Portal do cliente (histórico, status, NFs para download)
-- Gamificação completa (XP, HCoins, níveis, loja)
-- WhatsApp opt-in
+### BLOCO 2 — CONFIGURAÇÕES
+**Prioridade: ALTA | Depende de: Edge Functions invite-user + reset-user-password**
+**Rota: /configuracoes | Visível: somente role = owner**
 
-### FASE 3 — SaaS (agosto 2026+)
-- Onboarding automatizado para novos clientes
-- Billing Stripe (planos, cobrança recorrente, trial)
-- Primeiros clientes externos distribuidoras B2B
+Referência: Settings.tsx do Lovable (lido na íntegra)
+
+**2.1 — Aba Empresa**
+- Logo da empresa: upload para Supabase Storage, salvar URL em `app_config` key = 'logo_url'
+- Nome da empresa, CNPJ, telefone, endereço: salvar em `app_config`
+- Exibir logo no sidebar (AppLayout.tsx) quando configurada
+
+**2.2 — Aba Usuários**
+- Listagem de todos os sellers ativos com: avatar, nome, email, perfil (badge), clientes vinculados, pedidos, status vinculado
+- Toggle "Incluir inativos"
+- Ações por usuário: Editar nome/perfil | Inativar (com motivo) | Reativar | Transferir carteira | Reset de senha | Deletar
+- Botão "Novo Usuário": chama Edge Function `invite-user` com nome, email, role, senha opcional
+- Após criar: exibe senha temporária em modal para copiar
+- Perfis disponíveis: owner, seller, financeiro, logistica, entregas
+- Edge Functions necessárias: `invite-user`, `reset-user-password` (deployar no Supabase do 2.0)
+
+**2.3 — Aba Metas**
+- Referência: Goals.tsx + SellerGoalsPanel do Lovable
+- Tabela necessária: `monthly_goals` (criar se não existir)
+- Sub-seção Metas Mensais:
+  - Criar/editar/deletar meta por vendedor + mês + ano
+  - Campos: meta de vendas (R$), meta de ligações, tentativas, whatsapp c/ resposta, whatsapp s/ resposta
+  - Escopo: global (toda a loja) ou por vendedor
+  - Botão "Replicar" avança meta para o próximo mês
+  - Vendas realizadas calculadas automaticamente dos orders
+- Sub-seção Metas Diárias:
+  - Meta de contatos por dia por vendedor (campo único: contacts_target)
+  - Tabela: `daily_goals` (já existe no banco)
+- Sub-seção Metas por Categoria:
+  - Editar `category_goals` por vendedor + categoria + competência
+  - Tabela: `category_goals` (já existe no banco)
+- Sub-seção Configuração de Nível:
+  - Editar `seller_levels` por vendedor: monthly_sales_target, daily_calls_target, current_level
+  - Tabela: `seller_levels` (já existe no banco)
+
+**2.4 — Aba Fiscal**
+- Exibir/editar configurações do Focus NFe: token produção, ambiente, série, natureza da operação, CFOP padrão
+- Tabela: `fiscal_config` (já existe)
+- Tokens nunca exibidos em texto claro — máscara tipo senha
+
+**2.5 — Aba Equivalências de Produtos**
+- Listagem de equivalências cadastradas (hh_produto_equivalencia — verificar se existe no banco)
+- Criar nova equivalência: buscar produto A + produto B por nome/SKU
+- Deletar equivalência
 
 ---
 
-## 4. CRONOGRAMA SEMANAL ATÉ 14/05/2026
+### BLOCO 3 — TELA DO GESTOR
+**Prioridade: ALTA | Depende de: orders, sellers, tasks, clients, fin_payables**
+**Rota: /gestor | Visível: somente role = owner**
 
-| Semana | Período | Foco | Entregáveis |
+Referência: Gestor.tsx do Lovable (lido na íntegra) — adaptar sem CEE, sem RH/Genyo, sem Conta Azul
+
+**3.1 — Aba Visão Executiva**
+- KPIs do mês: faturamento total, margem bruta, pedidos aprovados, ticket médio, clientes ativos
+- Filtro de período (mês atual por padrão)
+- Filtro por vendedor (todos ou individual)
+- Tabela de comissões: nome do vendedor | faturamento | margem real | comissão calculada
+- Widget de estoque crítico (produtos abaixo do mínimo)
+
+**3.2 — Aba Comercial**
+- Sub-aba Vendedores: card por vendedor com faturamento, pedidos, % da meta, margem média, botão "Analisar"
+- Sub-aba Clientes: ranking de clientes por faturamento no período, filtro top20/100/todos
+- Sub-aba Radar: CarteiraRadar em modo visão da equipe (todos os vendedores)
+- Sub-aba Metas: visão consolidada das metas (leitura — edição fica em Configurações)
+- Sub-aba Fila Comercial: clientes prioritários de toda a equipe ordenados por priority_score
+
+**3.3 — Aba Financeiro**
+- Dados lançados manualmente no módulo Financeiro (fin_payables, fin_receivables)
+- Resumo: a pagar no mês, a receber no mês, saldo projetado
+- DRE simplificado: receita bruta, CMV, margem bruta, despesas operacionais, resultado
+
+**3.4 — Aba Relatório IA**
+- Chat com IA que analisa os dados do período selecionado
+- Edge Function: `gestor-ia-report` (existe no Lovable — deployar no 2.0)
+- Envia contexto: KPIs do período, performance por vendedor, alertas críticos
+- Retorna análise estruturada: pontos de atenção, oportunidades, recomendações
+
+---
+
+### BLOCO 4 — RELATÓRIOS
+**Prioridade: ALTA | Depende de: orders, clients, sellers**
+**Rota: /relatorios | Visível: owner + seller (com filtro por carteira)**
+
+Referência: Relatorios.tsx do Lovable (lido na íntegra)
+
+**4.1 — Aba Vendas & Clientes**
+- KPIs: faturamento total, clientes ativos, total de pedidos, ticket médio, comparativo período anterior
+- Filtro de período (mês/trimestre/semestre/ano/personalizado)
+- Filtro por vendedor (owner vê todos, vendedor vê só sua carteira)
+- Concentração de faturamento: top 20/100/200/todos com % do total
+- Breakdown por tier: top 20 = X% | top 21-100 = Y% | demais = Z%
+- Ranking de clientes: lista ordenada por faturamento no período
+
+**4.2 — Aba Comissões**
+- Tabela: vendedor | faturamento | margem real | comissão base | bônus categoria | total
+- Filtro por mês/ano
+- Exportação CSV
+
+**4.3 — Aba Novos & Reativados**
+- Clientes adquiridos no período (created_at dentro do período)
+- Clientes reativados no período (voltaram a comprar após inatividade)
+- KPIs: novos no mês, reativados no mês, taxa de retenção
+
+**4.4 — Exportação**
+- Botão "Exportar CSV" em cada aba
+- Gerar arquivo com os dados filtrados da aba ativa
+
+---
+
+### BLOCO 5 — ENTREGADOR ONLINE (SYNC)
+**Prioridade: MÉDIA | Depende de: entregas_eo (existe), app_config (criar), fin_sync_logs**
+
+**5.1 — Pré-requisito SQL**
+- Criar tabela `app_config` (key text UNIQUE, value text, updated_at timestamptz)
+- Verificar se `fin_sync_logs` tem colunas: id, status, mode, started_at, finished_at, duration_ms, receber_synced, pagar_synced, error_message
+- Verificar/adicionar colunas em `entregas_eo`: campo_livre1, campo_livre2, data_hora_em_rota, data_hora_ultimo_status, entregador_id
+
+**5.2 — Deploy da Edge Function**
+- Copiar `entregador-online-sync/index.ts` do Lovable para o projeto 2.0
+- Token e clienteId já estão hardcoded na função (token: 0c2d25e5e97e051ab56c67dc864e3dd3bf883b7d, clienteId: 5066)
+- Deploy via Claude Code: `supabase functions deploy entregador-online-sync`
+
+**5.3 — UI na tela de Configurações (Aba Entregas)**
+- Botão "Sincronizar agora" que chama a Edge Function manualmente
+- Exibir: última sincronização (app_config key = entregador_online_last_sync), total de entregas, status do último sync
+- Log de sincronizações (últimas 5 entradas de fin_sync_logs WHERE mode = 'entregador_online')
+
+**5.4 — Cron automático**
+- Configurar no Supabase: rodar `entregador-online-sync` a cada 2 horas
+- Via Supabase → Database → Cron Jobs
+
+---
+
+### BLOCO 6 — OPERAÇÕES RESTANTES (ETAPA D)
+**Prioridade: BAIXA para o prazo | Pode ir para Fase 2 se necessário**
+
+**6.1 — Entrada NF-e XML → contas a pagar**
+- Upload de XML de NF-e de fornecedor
+- Parser extrai: fornecedor, CNPJ, número NF, data, itens, valor total
+- Gera automaticamente lançamento em `fin_payables`
+- Atualiza estoque via `stock_entries` + `stock_entry_items`
+- Já existe entrada XML no módulo de Estoque — aproveitar o parser
+
+---
+
+## CRONOGRAMA REVISADO ATÉ 14/05/2026
+
+| Semana | Período | Bloco | Entregáveis |
 |---|---|---|---|
-| S1 | 27/03 – 04/04 | Cockpits + EvolutionEmbed | VendedorMeuDia ✅, EvolutionEmbed real ✅, commit ✅ |
-| S2 | 07/04 – 11/04 | Inteligência comercial A | Fila inteligente de prioridades (priority_score + PriorityQueueSection) |
-| S3 | 14/04 – 18/04 | Inteligência comercial B | Radar da Carteira (4 anéis na ficha do cliente) |
-| S4 | 21/04 – 25/04 | IA + Mural | Assistente IA na ficha do cliente, Mural social v1 |
-| S5 | 28/04 – 02/05 | Operações | Kanban inativos, Bipagem QR Code |
-| S6 | 05/05 – 09/05 | Fiscal + Deploy | Entrada NF-e XML, configurar Vercel |
-| S7 | 12/05 – 14/05 | Testes + Go-live | Teste completo todos os perfis, go-live |
+| S1 | 27/03–04/04 | Cockpits + Deploy | ✅ Concluído |
+| S2 | 07/04–11/04 | Bloco 1 | Identificação clientes (badge + kanban inativos) |
+| S3 | 14/04–18/04 | Bloco 2 (parte 1) | Configurações: SQL + Edge Functions + Aba Empresa + Usuários |
+| S4 | 21/04–25/04 | Bloco 2 (parte 2) | Configurações: Metas + Fiscal + Equivalências |
+| S5 | 28/04–02/05 | Bloco 3 | Tela do Gestor completa |
+| S6 | 05/05–09/05 | Bloco 4 | Relatórios completos |
+| S7 | 12/05–14/05 | Bloco 5 + Testes | Entregador Online sync + teste completo todos os perfis |
 
-### Reserva de risco
-- S2–S3 têm folga de 1 dia cada para imprevistos
-- S7 é somente testes — nenhum módulo novo entra nesta semana
-- Se atrasar S4, cortar Mural social (não é crítico para o MVP)
+**Reserva:** Bloco 6 (XML → contas a pagar) entra na Fase 2 se S7 ficar apertado.
 
 ---
 
-## 5. REGRAS DE EXECUÇÃO POR SESSÃO
+## DEPENDÊNCIAS DE BANCO — VERIFICAR ANTES DE CADA BLOCO
 
-### Abertura obrigatória
-1. Ler CONTEXT/CORE.md (status atual + próximo passo)
-2. Ler CONTEXT/BANCO.md (verificar tabelas antes de construir)
-3. Ler CONTEXT/DECISOES.md (regras de negócio ativas)
-4. Se envolver pessoas: ler CONTEXT/PESSOAS.md
-
-### Durante a sessão
-- Banco primeiro, tela depois — nunca construir sem tabela existir
-- Um arquivo por vez — confirmar build limpo antes de passar para o próximo
-- Zero framer-motion, zero tokens shadcn, zero emojis
-- Não recriar hooks existentes (useSupabaseQuery, useEvolutionData, useTasksData, etc.)
-- Multi-tenant obrigatório: company_id em todos os inserts
-- Usar exatamente os nomes de colunas do BANCO.md — nunca assumir
-
-### Encerramento obrigatório
-1. Rodar `npm run build` — confirmar zero erros TypeScript
-2. Commit das alterações com mensagem descritiva
-3. Atualizar CONTEXT/CORE.md — seção STATUS ATUAL (data, último concluído, próximo passo)
-4. Atualizar CONTEXT/BANCO.md se tabelas foram criadas/alteradas
-5. Atualizar CONTEXT/DECISOES.md se regras de negócio foram definidas
-
-### Padrão de commit
-```
-feat: descrição curta do que foi feito
-
-- item 1
-- item 2
-- item 3
-
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
-```
-
----
-
-## 6. QUERIES DE DIAGNÓSTICO RÁPIDO
-
-Rodar no Supabase → SQL Editor para verificar estado do banco antes de construir.
-
-### Verificar vendedores ativos e seus níveis
+### Bloco 1 — Identificação de clientes
 ```sql
-SELECT
-  s.name,
-  s.role,
-  s.department,
-  sl.current_level,
-  sl.monthly_sales_target,
-  sl.errors_this_month
-FROM sellers s
-LEFT JOIN seller_levels sl ON sl.seller_id = s.id
-WHERE s.active = true
-  AND s.company_id = '00000000-0000-0000-0000-000000000001'
-ORDER BY s.name;
-```
+-- Verificar se campo reativado_em existe em clients
+SELECT column_name FROM information_schema.columns
+WHERE table_name = 'clients' AND column_name = 'reativado_em';
 
-### Verificar cobertura de margem_real nos pedidos
-```sql
-SELECT
-  COUNT(*) AS total_pedidos,
-  COUNT(margem_real) AS com_margem,
-  ROUND(COUNT(margem_real)::numeric / COUNT(*) * 100, 1) AS pct_cobertura,
-  ROUND(AVG(margem_real) * 100, 2) AS margem_media_pct
-FROM orders
+-- Verificar valores de clients.origem
+SELECT DISTINCT origem, COUNT(*) FROM clients
 WHERE company_id = '00000000-0000-0000-0000-000000000001'
-  AND status NOT IN ('cancelled', 'rejected');
+GROUP BY origem ORDER BY count DESC;
 ```
 
-### Verificar interações registradas por tipo
+### Bloco 2 — Configurações
 ```sql
-SELECT
-  interaction_type,
-  COUNT(*) AS total,
-  COUNT(DISTINCT responsible_seller_id) AS vendedores
-FROM interactions
-WHERE company_id = '00000000-0000-0000-0000-000000000001'
-GROUP BY interaction_type
-ORDER BY total DESC;
+-- Verificar se monthly_goals existe
+SELECT COUNT(*) FROM information_schema.tables
+WHERE table_name = 'monthly_goals' AND table_schema = 'public';
+
+-- Verificar se app_config existe
+SELECT COUNT(*) FROM information_schema.tables
+WHERE table_name = 'app_config' AND table_schema = 'public';
+
+-- Verificar se hh_produto_equivalencia existe
+SELECT COUNT(*) FROM information_schema.tables
+WHERE table_name = 'hh_produto_equivalencia' AND table_schema = 'public';
 ```
 
-### Verificar vendas do mês por vendedor
+### Bloco 5 — Entregador Online
 ```sql
-SELECT
-  s.name,
-  COUNT(o.id) AS pedidos,
-  ROUND(SUM(o.total), 2) AS total_vendas,
-  sl.monthly_sales_target AS meta,
-  ROUND(SUM(o.total) / sl.monthly_sales_target * 100, 1) AS pct_meta
-FROM orders o
-JOIN sellers s ON s.id = o.seller_id
-LEFT JOIN seller_levels sl ON sl.seller_id = o.seller_id
-WHERE o.company_id = '00000000-0000-0000-0000-000000000001'
-  AND o.created_at >= date_trunc('month', now())
-  AND o.created_at <  date_trunc('month', now()) + interval '1 month'
-  AND o.status NOT IN ('cancelled', 'rejected')
-GROUP BY s.name, sl.monthly_sales_target
-ORDER BY total_vendas DESC;
-```
+-- Verificar colunas de entregas_eo
+SELECT column_name FROM information_schema.columns
+WHERE table_name = 'entregas_eo' ORDER BY ordinal_position;
 
-### Verificar tarefas atrasadas por vendedor
-```sql
-SELECT
-  s.name,
-  COUNT(*) AS tarefas_atrasadas
-FROM tasks t
-JOIN sellers s ON s.id = t.assigned_to_seller_id
-WHERE t.company_id = '00000000-0000-0000-0000-000000000001'
-  AND t.status_crm = 'pendente'
-  AND t.is_deleted = false
-  AND t.task_date < CURRENT_DATE
-GROUP BY s.name
-ORDER BY tarefas_atrasadas DESC;
-```
-
-### Verificar tabelas de gamificação existentes e populadas
-```sql
-SELECT
-  t.table_name,
-  (SELECT COUNT(*) FROM information_schema.tables it
-   WHERE it.table_name = t.table_name
-     AND it.table_schema = 'public') AS existe,
-  CASE t.table_name
-    WHEN 'seller_levels'         THEN (SELECT COUNT(*)::text FROM seller_levels)
-    WHEN 'seller_errors'         THEN (SELECT COUNT(*)::text FROM seller_errors)
-    WHEN 'seller_stars'          THEN (SELECT COUNT(*)::text FROM seller_stars)
-    WHEN 'interactions'          THEN (SELECT COUNT(*)::text FROM interactions)
-    WHEN 'work_month_config'     THEN (SELECT COUNT(*)::text FROM work_month_config)
-    WHEN 'category_goals'        THEN (SELECT COUNT(*)::text FROM category_goals)
-    WHEN 'category_achievements' THEN (SELECT COUNT(*)::text FROM category_achievements)
-    WHEN 'xp_log'                THEN (SELECT COUNT(*)::text FROM xp_log)
-    WHEN 'user_medals'           THEN (SELECT COUNT(*)::text FROM user_medals)
-    ELSE '?'
-  END AS registros
-FROM (VALUES
-  ('seller_levels'), ('seller_errors'), ('seller_stars'),
-  ('interactions'), ('work_month_config'), ('category_goals'),
-  ('category_achievements'), ('xp_log'), ('user_medals')
-) AS t(table_name);
-```
-
-### Verificar entregas do mês por entregador (Cláudio)
-```sql
-SELECT
-  status,
-  COUNT(*) AS total
-FROM entregas_eo
-WHERE company_id = '00000000-0000-0000-0000-000000000001'
-  AND entregador ILIKE '%Cláudio%'
-  AND data_baixa >= date_trunc('month', now())
-GROUP BY status;
-```
-
-### Verificar priority_score dos clientes (para fila inteligente)
-```sql
-SELECT
-  COUNT(*) AS total_clientes,
-  COUNT(priority_score) AS com_score,
-  COUNT(*) - COUNT(priority_score) AS sem_score,
-  ROUND(AVG(priority_score), 2) AS score_medio,
-  MAX(priority_score) AS score_maximo
-FROM clients
-WHERE company_id = '00000000-0000-0000-0000-000000000001'
-  AND status != 'inativo';
+-- Verificar colunas de fin_sync_logs
+SELECT column_name FROM information_schema.columns
+WHERE table_name = 'fin_sync_logs' ORDER BY ordinal_position;
 ```
 
 ---
 
-## 7. ARQUITETURA DE ROTEAMENTO
+## FASE 2 — MAIO A JULHO 2026
+
+| Item | Observação |
+|---|---|
+| Bipagem QR Code na saída do pedido | Conferência antes de embalar |
+| IA Central (multi-modelo) | Claude/GPT/Gemini por custo |
+| Portal do cliente | Histórico, status, NFs para download |
+| Gamificação completa | XP, HCoins, níveis, loja de recompensas |
+| Aba Campanhas no EvolutionEmbed | Tabelas campaigns + campaign_participants |
+| WhatsApp opt-in | Módulo de mensagens |
+| RH básico | Registro de funcionários |
+| Registro de interações | Ligações e WhatsApp via sistema (preenche tabela interactions) |
+
+---
+
+## FASE 3 — AGOSTO 2026+
+
+| Item |
+|---|
+| SaaS multi-tenant (onboarding automatizado) |
+| Billing Stripe (planos, trial, cobrança recorrente) |
+| Domínio hhcontrol.com.br configurado |
+| Primeiros clientes externos |
+
+---
+
+## ARQUITETURA DE ROTEAMENTO (ATUALIZADA)
 
 ```
 / (RootRedirect)
-├── department = 'entregas'   → /entregador  (EntregadorDashboard — sem sidebar)
-├── department = 'logistics'  → /logistica   (LogisticaMeuDia)
-├── department = 'admin'      → /admin       (AdminMeuDia)
-├── role = 'owner'            → /owner       (OwnerMeuDia)
-└── role = 'seller'           → /vendedor    (VendedorMeuDia)
+├── department = 'entregas'   → /entregador
+├── department = 'logistica'  → /logistica
+├── department = 'financeiro' → /admin
+├── role = 'owner'            → /owner
+└── role = 'seller'           → /vendedor
+
+Rotas globais (todos os perfis autenticados):
+├── /clientes              → ClientesPage
+├── /clientes/:id          → ClientePage
+├── /clientes/inativos     → KanbanInativosPage (NOVO — Bloco 1)
+├── /pedidos               → PedidosPage
+├── /produtos              → ProdutosPage
+├── /compras               → ComprasPage
+├── /estoque               → EstoquePage
+├── /financeiro            → FinanceiroPage
+├── /tarefas               → TarefasPage
+├── /mural                 → MuralPage
+├── /relatorios            → RelatoriosPage (NOVO — Bloco 4)
+└── /gestor                → GestorPage (NOVO — Bloco 3, somente owner)
+
+Rotas owner only:
+└── /configuracoes         → ConfiguracoesPage (NOVO — Bloco 2)
 ```
-
-### Cockpits e suas abas
-
-| Cockpit | Usuário | Abas |
-|---|---|---|
-| OwnerMeuDia | Henrique | Vendas, Tarefas, Equipe, Perfil, Evolução |
-| AdminMeuDia | Anna | Tarefas, Compras, Financeiro |
-| LogisticaMeuDia | Adriana | Tarefas, Estoque, Entregas |
-| EntregadorDashboard | Cláudio | Entregas, Tarefas, Perfil, Abastecimentos, Manutenção |
-| VendedorMeuDia | Joésio, Murilo, Nayara | Meu Dia, Tarefas, Perfil, Evolução |
 
 ---
 
-## 8. HOOKS DISPONÍVEIS — REFERÊNCIA RÁPIDA
+## ITENS EM ABERTO (NÃO BLOQUEADORES)
 
-| Hook | Arquivo | Retorna |
+| Item | Situação | Impacto |
 |---|---|---|
-| useAuth | hooks/useAuth.ts | seller, role, isLoading |
-| useSupabaseQuery | hooks/useSupabaseQuery.ts | data, loading, refetch |
-| useEvolutionData | hooks/useEvolutionData.ts | vendas, tarefas, comissão, TBM, contatos, nível |
-| useTasksData | hooks/useTasksData.ts | tasks com JOIN clients |
-| useSellersData | hooks/useSellersData.ts | sellers ativos |
-| useProfileData | hooks/useProfileData.ts | seller + KPIs de tarefas |
-| useWorkingDaysTargets | hooks/useWorkingDaysTargets.ts | métricas de vendas e tarefas do mês |
-| useActionCenterData | hooks/useActionCenterData.ts | alertas (tarefas atrasadas, clientes sem pedido) |
-| useDailyFocus | hooks/useDailyFocus.ts | foco diário (localStorage) |
-| useTaskLimits | hooks/useTaskLimits.ts | limites de tarefas por departamento |
-| useCriticalBlocker | hooks/useCriticalBlocker.ts | bloqueio de tarefas críticas |
+| margem_real em orders | 34% de cobertura | Comissão calculada parcialmente |
+| interactions vazia | Depende de registro via sistema | Scoreboard de contatos zerado |
+| Aba Campanhas EvolutionEmbed | Placeholder | Não visível para usuário |
+| Domínio hhcontrol.com.br | Comprar em registro.br | Sistema funciona sem ele |
+| Senha dos usuários convidados | Equipe precisa ativar via email | Logins criados mas não testados |
