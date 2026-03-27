@@ -25,12 +25,11 @@ export function ClientAIChat({ clientId, clientName, companyId }: ClientAIChatPr
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [initialLoading, setInitialLoading] = useState(true)
+  const [initialLoading, setInitialLoading] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  useEffect(() => { loadInitialAnalysis() }, [clientId])
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
   const callAssistant = async (msgs: Message[]) => {
@@ -81,7 +80,7 @@ export function ClientAIChat({ clientId, clientName, companyId }: ClientAIChatPr
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input) }
   }
 
-  const reset = () => { setMessages([]); loadInitialAnalysis() }
+  const reset = () => { setMessages([]) }
 
   return (
     <div className="border border-gray-200 rounded-xl bg-white overflow-hidden">
@@ -121,6 +120,22 @@ export function ClientAIChat({ clientId, clientName, companyId }: ClientAIChatPr
               <div className="flex items-center gap-3 py-6">
                 <div className="w-7 h-7 rounded-full bg-indigo-50 flex items-center justify-center shrink-0"><Bot size={14} className="text-indigo-600" /></div>
                 <div className="flex items-center gap-2 text-sm text-gray-400"><Loader2 size={14} className="animate-spin" />Analisando cliente...</div>
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 gap-4">
+                <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center">
+                  <Bot size={22} className="text-[#3B5BDB]" />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-medium text-gray-700">Copiloto Comercial</p>
+                  <p className="text-xs text-gray-400 mt-1">Análise completa de {clientName} em segundos</p>
+                </div>
+                <button
+                  onClick={loadInitialAnalysis}
+                  className="px-5 py-2 rounded-lg bg-[#3B5BDB] text-white text-sm font-medium hover:bg-[#3451c7] transition-colors"
+                >
+                  Analisar cliente
+                </button>
               </div>
             ) : (
               messages.map((msg, i) => (
