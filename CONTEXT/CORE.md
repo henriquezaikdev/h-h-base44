@@ -160,20 +160,25 @@ Módulos pendentes:
 Data: 27/03/2026
 
 Último concluído:
-- priority_score calculado e gravado em clients (enum client_status mapeado: active, reorder, delayed, at_risk, inactive)
-- PriorityQueueSection.tsx criado e integrado no VendedorMeuDia aba Meu Dia
-- RadarCarteira.tsx criado e integrado no VendedorMeuDia aba Meu Dia (452 linhas)
-  - KPIs em linha, SVG com dots nos anéis, tabs de filtro, lista com borda colorida
+- Etapa C — Inteligência Comercial completa:
+  - priority_score calculado e gravado em clients
+  - PriorityQueueSection.tsx criado e integrado no VendedorMeuDia
+  - RadarCarteira.tsx criado e integrado no VendedorMeuDia (452 linhas)
+  - AssistenteCliente (ClientAIChat.tsx) criado e integrado na ClientePage
+    - Edge Function assistente-cliente conectada (claude-sonnet-4-20250514)
+    - ANTHROPIC_API_KEY cadastrada nos secrets do Supabase
+    - Análise manual (não dispara ao abrir — evita custo desnecessário)
+    - Chat contínuo com histórico acumulado
 
 Em andamento:
 - Aba Campanhas no EvolutionEmbed — placeholder (tabelas não criadas)
-- margem_real em orders — preenchida em apenas 34% dos pedidos migrados
-- interactions vazia — contatos reais dependem de registro via sistema
+- margem_real em orders — 34% de cobertura
+- interactions vazia — depende de registro via sistema
 
 Próximo passo:
-1. Assistente IA na ficha do cliente (Edge Function assistente-cliente já deployada)
-2. Deploy Vercel + GitHub
-3. Mural social (tabela mural_posts já existe no banco)
+1. Deploy Vercel + GitHub (Etapa E — crítico para o prazo)
+2. Mural social (Etapa D)
+3. Kanban de clientes inativos (Etapa D)
 
 Observações:
 - commission_pct em order_items: 100% zerado — irrelevante, comissão usa margem_real
