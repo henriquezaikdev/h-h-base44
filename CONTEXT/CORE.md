@@ -161,11 +161,15 @@ Data: 27/03/2026
 
 Último concluído:
 - Etapa C completa: Fila de Prioridades, Radar da Carteira, Assistente IA
-- Etapa E completa: GitHub (henriquezaikdev/hh-control-2) + Vercel (hh-control-2.vercel.app)
-- Mural Social completo (771 linhas, commit 0e49dd0):
-  - MuralPage.tsx: feed, stories, reações, comentários, modal de publicação
-  - MuralWidget.tsx: widget compacto nos cockpits Owner e Vendedor
-  - Rota /mural + sidebar para todos os perfis
+- Etapa E completa: GitHub + Vercel (hh-control-2.vercel.app)
+- Mural Social completo (commit 0e49dd0)
+- Logins da equipe criados e vinculados no Supabase Auth:
+  - Adriana: adrianahhcontrol@gmail.com
+  - Anna: financeirohhntoners@gmail.com
+  - Cláudio: 7sabugos@gmail.com
+  - Joésio: vendashh02@gmail.com
+  - Murilo: vendashh01@gmail.com
+  - Nayara: cartuchogratis10@gmail.com
 
 Em andamento:
 - Aba Campanhas no EvolutionEmbed — placeholder (tabelas não criadas)
@@ -173,7 +177,7 @@ Em andamento:
 - interactions vazia — depende de registro via sistema
 
 Próximo passo:
-1. Criar logins da equipe no Supabase Auth
+1. Equipe acessa o sistema e valida os cockpits
 2. Kanban de clientes inativos (Etapa D)
 3. Bipagem QR Code na saída do pedido (Etapa D)
 
