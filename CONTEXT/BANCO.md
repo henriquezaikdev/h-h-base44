@@ -76,7 +76,9 @@ Nunca traduzir nomes automaticamente.
 | role | text (owner, admin, manager, seller, logistics) |
 | department | text |
 | avatar_url | text |
+| status | text (ATIVO, INATIVO) |
 | active | boolean |
+| is_sales_active | boolean |
 | created_at | timestamptz |
 
 **RLS sellers:** nunca subquery direto na policy — usar get_my_company_id() SECURITY DEFINER.
@@ -315,21 +317,52 @@ Nunca traduzir nomes automaticamente.
 ## TAREFAS
 
 ### tasks
-| Coluna | Tipo |
-|---|---|
-| id | uuid |
-| company_id | uuid |
-| title | text |
-| description | text |
-| client_id | uuid (fk → clients) |
-| assigned_to | uuid (fk → sellers) |
-| priority | text (baixa, normal, alta, urgente) |
-| due_date | date |
-| done_at | timestamptz |
-| status | enum task_status (open, done, cancelled) |
-| is_recurring | boolean |
-| created_at | timestamptz |
-| updated_at | timestamptz |
+**Schema dual:** colunas originais 2.0 + colunas CRM adicionadas para compatibilidade com Meu Dia.
+Os hooks usam as colunas CRM (status_crm, priority_crm, task_date, etc.)
+
+| Coluna | Tipo | Obs |
+|---|---|---|
+| id | uuid | |
+| company_id | uuid | |
+| title | text | título (2.0) |
+| description | text | notas/observações (2.0) |
+| client_id | uuid (fk → clients) | |
+| assigned_to | uuid (fk → sellers) | coluna original 2.0 |
+| priority | enum (baixa, normal, alta, urgente) | enum original 2.0 |
+| due_date | date | data original 2.0 |
+| done_at | timestamptz | |
+| status | enum task_status (open, done, cancelled) | enum original 2.0 |
+| is_recurring | boolean | |
+| created_at | timestamptz | |
+| updated_at | timestamptz | |
+| **Colunas CRM (adicionadas 26/03/2026)** | | |
+| status_crm | text (pendente, concluida, cancelada) | usado pelos hooks |
+| priority_crm | text (baixa, media, alta, urgente) | usado pelos hooks |
+| task_date | date | data da tarefa (usado pelos hooks) |
+| contact_type | text (ligacao, whatsapp) | tipo de contato |
+| contact_reason | text (RETORNO, ACOMPANHAMENTO, VENDA, POS_VENDA) | |
+| created_by_seller_id | uuid (fk → sellers) | quem criou |
+| assigned_to_seller_id | uuid (fk → sellers) | atribuído a |
+| completed_at | timestamptz | quando concluiu |
+| manager_confirmed_at | timestamptz | confirmação do gestor |
+| planning_notes | text | notas de planejamento |
+| planning_products | jsonb | produtos planejados |
+| task_category | text | categoria da tarefa |
+| task_steps | jsonb | passos/checklist |
+| is_deleted | boolean (default false) | soft delete |
+| tem_orcamento_aberto | boolean | |
+| orcamento_ca_codigo | text | |
+| orcamento_valor | numeric | |
+| orcamento_aberto_em | timestamptz | |
+| operational_error | boolean | erro operacional |
+| error_note | text | descrição do erro |
+| source_module | text | módulo de origem |
+| related_type | text | tipo relacionado |
+| related_id | uuid | id relacionado |
+| created_by_trigger | boolean | criado por trigger |
+| unique_key | text | chave única |
+
+**Regra hooks:** sempre usar status_crm/priority_crm/task_date em vez dos enums originais.
 
 ---
 
@@ -369,6 +402,85 @@ Nunca traduzir nomes automaticamente.
 
 ---
 
+## GAMIFICAÇÃO E EVOLUÇÃO
+
+### seller_levels
+**Status: SQL gerado, aguardando execução no Supabase**
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| seller_id | uuid (fk → sellers, UNIQUE) |
+| current_level | text (ovo, pena, aguia) default 'ovo' |
+| monthly_sales_target | numeric default 30000 |
+| daily_calls_target | integer default 18 |
+| base_daily_calls | integer default 18 |
+| base_daily_whatsapp | integer default 15 |
+| consecutive_months_met | integer default 0 |
+| consecutive_months_missed | integer default 0 |
+| commission_bonus | numeric default 0 |
+| errors_this_month | integer default 0 |
+| last_evaluated_at | timestamptz |
+| created_at | timestamptz |
+| updated_at | timestamptz |
+
+### seller_errors
+**Status: SQL gerado, aguardando execução no Supabase**
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| seller_id | uuid (fk → sellers) |
+| month | integer |
+| year | integer |
+| error_date | date |
+| description | text |
+| registered_by | uuid (fk → sellers) |
+| created_at | timestamptz |
+
+### seller_stars
+**Status: SQL gerado, aguardando execução no Supabase**
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| seller_id | uuid (fk → sellers, UNIQUE) |
+| bronze | integer default 0 |
+| prata | integer default 0 |
+| ouro | integer default 0 |
+| total_stars | integer default 0 |
+| updated_at | timestamptz |
+
+### work_month_config
+**Status: SQL gerado, aguardando execução no Supabase**
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| year_month | text (formato: '2026-03') |
+| working_days | integer default 22 |
+| operational_start_date | date |
+| created_at | timestamptz |
+| updated_at | timestamptz |
+
+### interactions
+**Status: SQL gerado, aguardando execução no Supabase**
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| responsible_seller_id | uuid (fk → sellers) |
+| client_id | uuid (fk → clients) |
+| interaction_type | text (ligacao, whatsapp, email, visita, outro) |
+| interaction_date | date |
+| notes | text |
+| duration_seconds | integer |
+| created_at | timestamptz |
+
+**SQL de criação:** supabase/migrations/20260326_gamificacao.sql
+
+---
+
 ## EDGE FUNCTIONS DEPLOYADAS
 - emitir-nfe: recebe order_id + company_id, monta payload Focus NFe, emite NF-e
 - consultar-nfe: recebe order_id + company_id + ref, consulta status no Focus NFe
@@ -378,6 +490,16 @@ Nunca traduzir nomes automaticamente.
 ## HOOKS DISPONÍVEIS
 - useSupabaseQuery — padrão para todas as queries
 - useNFe — emissão e consulta de NF-e (src/hooks/useNFe.ts)
+- useTasksData — tarefas com schema CRM (status_crm, task_date, etc.)
+- useSellersData — sellers ativos (filtro status ATIVO)
+- useEvolutionData — vendas + tarefas por mês, dailyActivities
+- useProfileData — dados do seller + KPIs de tarefas
+- useWorkingDaysTargets — métricas de vendas e tarefas do mês
+- useActionCenterData — alertas (tarefas atrasadas, clientes sem pedido)
+- useDailyFocus — foco diário (localStorage, tabela daily_focus futura)
+- useTaskLimits — limites de tarefas por departamento
+- useCriticalBlocker — bloqueio de tarefas críticas
 
 ## COMPONENTES DISPONÍVEIS
 - EmitirNFeButton — botão + modal de emissão NF-e (src/components/EmitirNFeButton.tsx)
+- 20 componentes shadcn/ui em src/components/ui/

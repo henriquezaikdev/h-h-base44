@@ -157,30 +157,41 @@ Módulos pendentes:
 - Primeiros clientes externos distribuidoras B2B
 
 ## STATUS ATUAL
-Data: 26/03/2026
+Data: 27/03/2026
+
 Último concluído:
 - OwnerMeuDia completo com 5 abas funcionais (Vendas, Tarefas, Equipe, Perfil, Evolução)
 - 20 componentes shadcn/ui criados
-- 10 hooks de dados criados e corrigidos para schema real do banco
-- Todos os hooks corrigidos: enum task_status (open/done/cancelled), timezone UTC→BRT
-- Queries corrigidas: tabelas inexistentes removidas (work_month_config, daily_focus, app_config, seller_levels, interactions, user_medals)
-- Sellers duplicados desativados (active=false), filtro .eq('active', true) adicionado
-- Tarefas órfãs filtradas (assigned_to não nulo)
+- 10 hooks de dados criados e corrigidos para schema real do banco 2.0
+- Schema dual em tasks: colunas CRM (status_crm, priority_crm, task_date, etc.) adicionadas
+- Hooks usam colunas CRM: status_crm (pendente/concluida), priority_crm, task_date, created_by_seller_id, assigned_to_seller_id
+- Sellers: filtro .or('status.eq.ATIVO,status.is.null'), duplicados desativados
+- Timezone UTC→BRT corrigido (toBrtDateStr com .replace(' ', 'T'))
 - Gráfico de Evolução mostra Vendas + Tarefas por dia
-- PerformanceTab: card sempre visível, mensagem quando sem atividade
+- SQL de gamificação gerado (seller_levels, seller_errors, seller_stars, work_month_config, interactions)
 - QueryClientProvider adicionado no App.tsx
 - Build TypeScript 100% limpo
-Em andamento: Correções na ficha do cliente (ClientePage.tsx)
+- Commit final: 8563c58 (42 arquivos, +15.365 linhas)
+
+Em andamento:
+- Aba Evolução: Performance incompleta (falta visual fiel ao Lovable)
+- SQL de gamificação aguardando execução no Supabase
+
 Próximo passo:
-- Assistente IA comercial na ficha do cliente
-- Fila inteligente de prioridades
-- Módulos da Fase 1 pendentes (prazo 14/05/2026)
+1. Rodar SQL de gamificação no Supabase (supabase/migrations/20260326_gamificacao.sql)
+2. Completar aba Evolução — Performance fiel ao Lovable
+3. Construir AdminMeuDia (Anna Cristina)
+4. Construir LogisticaMeuDia (Adriana)
+5. Corrigir ActionCenter do vendedor
+
 Observações:
 - order_number é tipo text — sempre comparar com aspas simples
 - UPDATE em massa: usar SET session_replication_role = replica para bypassar RLS
 - JOIN orders → sellers é ambíguo (duas FKs) — usar query separada
 - RLS sellers: nunca subquery direto na policy — usar get_my_company_id()
-- Tabelas sellers: coluna active (boolean, default true) adicionada para controlar duplicados
-- useDailyFocus usa localStorage como fallback (tabela daily_focus ainda não existe)
-- useTaskLimits usa defaults hardcoded (tabela app_config ainda não existe)
-- Gamificação (XP, HCoins, medalhas): tabelas ainda não existem — componentes mostram placeholders
+- tasks tem schema dual: colunas originais 2.0 (status enum, priority enum) + colunas CRM (status_crm, priority_crm)
+- Hooks SEMPRE usam colunas CRM, nunca os enums originais
+- completed_at pode ser null em tarefas antigas — usar task_date como fallback
+- useDailyFocus usa localStorage como fallback (tabela daily_focus futura)
+- useTaskLimits usa defaults hardcoded (tabela app_config futura)
+- Gamificação: SQL gerado mas tabelas ainda não criadas no banco
