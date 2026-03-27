@@ -160,31 +160,20 @@ Módulos pendentes:
 Data: 27/03/2026
 
 Último concluído:
-- Diagnóstico completo do banco (52 tabelas mapeadas)
-- Duplicatas identificadas: xp_log/xp_logs (ambas vazias — usar xp_log), purchase_cotacoes/purchase_quotes
-- Tabelas populadas: work_month_config (mar/abr/mai 2026), seller_levels (Joésio R$35k, Murilo R$35k, Nayara R$30k), seller_stars
-- Tabelas criadas: category_goals, category_achievements (com RLS)
-- VendedorMeuDia.tsx criado — 4 abas: Meu Dia, Tarefas, Perfil, Evolução
-- ActionCenter.tsx removido do App.tsx
-- EvolutionEmbed completo com dados reais:
-  - PerformanceTab: vendas, pedidos, tarefas, TBM, contatos (ligações/whatsapp), sem framer-motion, sem tokens shadcn
-  - ComissaoNivelTab: nível real do banco, comissão por faixa de margem_real, bônus por categoria, regra de aceleração
-  - RegrasTab: limpeza de design concluída
-  - Label "Comissão & Nível" com acentuação corrigida no EvolutionEmbed.tsx
-- useEvolutionData expandido com 12 novos campos: metaMensal, ligacoesMes, whatsappMes, metaLigacoes, metaWhatsapp, tbm, sellerLevel, comissaoBase, comissaoCategorias, comissaoTotal, pedidosSemMargem, aceleracaoAtiva
-- HH_CONTROL_PLANEJAMENTO.md gerado em CONTEXT/
+- priority_score calculado e gravado em clients (SQL rodado no Supabase)
+- Enum client_status mapeado: active, reorder, delayed, at_risk, inactive
+- PriorityQueueSection.tsx criado (196 linhas) — fila de prioridades por score
+- PriorityQueueSection integrado no VendedorMeuDia.tsx aba Meu Dia
 
 Em andamento:
 - Aba Campanhas no EvolutionEmbed — placeholder (tabelas não criadas)
-- margem_real em orders — preenchida em apenas 34% dos pedidos migrados (2.482 de 7.272)
+- margem_real em orders — preenchida em apenas 34% dos pedidos migrados
 - interactions vazia — contatos reais dependem de registro via sistema
-- Dados históricos do Cláudio para entregas_eo — não importados
 
 Próximo passo:
-1. Fila inteligente de prioridades (priority_score em clients)
-2. Radar da Carteira (anéis: ativo/recompra/atraso/risco)
+1. Radar da Carteira (anéis: ativo/recompra/atraso/risco) — Etapa C, item 2
+2. Assistente IA na ficha do cliente (Edge Function já criada)
 3. Deploy Vercel + GitHub
-4. Mural social (mural_posts já existe no banco)
 
 Observações:
 - commission_pct em order_items: 100% zerado — irrelevante, comissão usa margem_real
