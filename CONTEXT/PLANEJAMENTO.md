@@ -127,11 +127,13 @@ Nunca construir componente que depende de tabela inexistente.
 - [ ] Bipagem QR Code na saída do pedido
 - [ ] Entrada NF-e XML → contas a pagar automático
 
-#### Etapa E — Deploy (PENDENTE)
-- [ ] Configurar projeto Vercel
-- [ ] Apontar domínio hhcontrol.com.br
-- [ ] Variáveis de ambiente no Vercel
-- [ ] Teste completo em produção com todos os perfis
+#### Etapa E — Deploy (CONCLUÍDA em 27/03/2026)
+- [x] Repositório GitHub: henriquezaikdev/hh-control-2 (privado)
+- [x] Deploy Vercel: hh-control-2.vercel.app (funcionando)
+- [x] Variáveis de ambiente configuradas (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY)
+- [x] Login testado e funcionando em produção
+- [ ] Apontar domínio hhcontrol.com.br (pendente)
+- [ ] Criar logins para Anna, Adriana, Joésio, Murilo, Nayara, Cláudio no Supabase Auth
 
 ---
 

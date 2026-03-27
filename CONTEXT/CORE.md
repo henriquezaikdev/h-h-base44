@@ -160,15 +160,12 @@ Módulos pendentes:
 Data: 27/03/2026
 
 Último concluído:
-- Etapa C — Inteligência Comercial completa:
-  - priority_score calculado e gravado em clients
-  - PriorityQueueSection.tsx criado e integrado no VendedorMeuDia
-  - RadarCarteira.tsx criado e integrado no VendedorMeuDia (452 linhas)
-  - AssistenteCliente (ClientAIChat.tsx) criado e integrado na ClientePage
-    - Edge Function assistente-cliente conectada (claude-sonnet-4-20250514)
-    - ANTHROPIC_API_KEY cadastrada nos secrets do Supabase
-    - Análise manual (não dispara ao abrir — evita custo desnecessário)
-    - Chat contínuo com histórico acumulado
+- Etapa C — Inteligência Comercial completa (Fila, Radar, Assistente IA)
+- Etapa E — Deploy concluído:
+  - Repositório GitHub: henriquezaikdev/hh-control-2 (privado)
+  - Deploy Vercel: hh-control-2.vercel.app (funcionando)
+  - Variáveis de ambiente configuradas (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY)
+  - Login testado e funcionando em produção
 
 Em andamento:
 - Aba Campanhas no EvolutionEmbed — placeholder (tabelas não criadas)
@@ -176,9 +173,9 @@ Em andamento:
 - interactions vazia — depende de registro via sistema
 
 Próximo passo:
-1. Deploy Vercel + GitHub (Etapa E — crítico para o prazo)
-2. Mural social (Etapa D)
-3. Kanban de clientes inativos (Etapa D)
+1. Criar logins para a equipe (Anna, Adriana, Joésio, Murilo, Nayara, Cláudio) no Supabase Auth
+2. Mural social — Etapa D (tabela mural_posts já existe)
+3. Kanban de clientes inativos — Etapa D
 
 Observações:
 - commission_pct em order_items: 100% zerado — irrelevante, comissão usa margem_real
