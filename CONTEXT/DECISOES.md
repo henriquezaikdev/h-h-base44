@@ -143,3 +143,162 @@
 - useTaskLimits: limites de tarefas por departamento (defaults hardcoded)
 - useCriticalBlocker: bloqueio de tarefas críticas (snooze 3h)
 - useCoinsAndMedals: placeholder (tabelas de gamificação futuras)
+
+
+## VISÃO REAL DO PROJETO — CONTEXTO COMPLETO (27/03/2026)
+
+### O que é o H&H Control 2.0 de verdade
+
+O H&H Control 2.0 não é um CRM simples. É um **Company OS** — um sistema operacional completo da empresa. Ele foi concebido pelo Henrique (dono da H&H Suprimentos Corporativos) e executado com auxílio de IA.
+
+O sistema é totalmente interligado. Cada módulo consome dados de outros módulos:
+- Pedidos alimentam o Meu Dia do vendedor (scoreboard de vendas)
+- Pedidos alimentam o Meu Dia da Adriana (separação e entrega)
+- Pedidos alimentam o Financeiro (contas a receber)
+- Pedidos alimentam a Evolução do vendedor (comissão e nível)
+- Clientes alimentam a fila de prioridades do vendedor
+- Clientes alimentam o Radar da Carteira
+- Clientes alimentam o Assistente IA
+- Tarefas alimentam todos os Meu Dia (de todos os perfis)
+- Interações (ligações/whatsapp) alimentam o scoreboard diário do vendedor
+- Interações alimentam a aba Evolução (qualidade de contato)
+- Compras alimentam o Meu Dia da Anna (pendências e cotações)
+- Estoque alimenta o Meu Dia da Adriana (alertas de ruptura)
+- Gamificação (XP, medalhas, estrelas, nível) alimenta o Perfil e a Evolução de todos
+
+Isso significa que **não dá para construir o Meu Dia sem os outros módulos estarem prontos**. A ordem de construção importa.
+
+---
+
+### Por que o projeto estava desorganizado
+
+O sistema foi construído de dentro para fora — funcionalidade por funcionalidade, sem arquitetura de fluxo definida previamente. A IA (Claude) conduzia o desenvolvimento sem entender como as telas se conectavam entre si.
+
+Resultado:
+- Módulos construídos sem as tabelas que eles precisam existirem no banco
+- O Meu Dia estava sendo desenvolvido sem `interactions`, `routines`, `daily_goals`, `medals`, `user_medals`, `xp_log` e `daily_focus` no banco
+- Decisões técnicas tomadas sem considerar as dependências entre módulos
+- Contexto perdido entre sessões — cada chat começava sem saber o que havia sido feito ou quebrado antes
+
+---
+
+### A decisão de replanejamento
+
+Em 27/03/2026 foi feito um replanejamento completo. O código do Lovable (sistema anterior) foi analisado não para copiar, mas para entender:
+- Como as telas se comunicam
+- Quais campos cada componente consome
+- Quais tabelas cada módulo precisa
+- A lógica de negócio real por trás de cada funcionalidade
+
+A partir dessa análise foi gerado o documento **HH_CONTROL_PLANEJAMENTO.md** com o mapa completo de dependências e a sequência correta de construção.
+
+---
+
+### Por que o código do Lovable existe no repositório
+
+O arquivo `business-flow-core-main.zip` contém o sistema anterior (construído no Lovable). Ele tem 51 páginas, 467 componentes e 74 hooks — um sistema maduro e completo.
+
+**Ele NÃO deve ser copiado para o 2.0.**
+
+Ele serve exclusivamente como:
+1. Referência de lógica de negócio (o que cada tela faz, quais campos usa)
+2. Referência de fluxo entre módulos (como tela A chama tela B)
+3. Referência de regras de negócio (cálculos, validações, fluxos de aprovação)
+
+As syncs do Conta Azul que existem no Lovable são ignoradas completamente. O 2.0 é a fonte da verdade — não depende do Conta Azul para nada.
+
+---
+
+### Por que o Conta Azul está sendo removido
+
+O Conta Azul tem renovação expirando em 14/05/2026. A única função crítica que ele cumpria era a emissão de NF-e — que já foi substituída pelo Focus NFe (em produção, funcionando desde março/2026).
+
+Todo o resto (estoque, financeiro, pedidos, CRM) já é melhor gerenciado pelo H&H Control 2.0. Após 14/05/2026 o Conta Azul é desativado e o H&H Control 2.0 passa a ser o único sistema da empresa.
+
+---
+
+### Por que a sequência banco → tela é obrigatória
+
+Se uma tela é construída antes da tabela que ela consome existir no banco, o hook de dados retorna vazio ou erro. O desenvolvedor (Claude Code) tenta resolver criando fallbacks, mocks ou localStorage — o que gera dívida técnica e bugs difíceis de rastrear.
+
+A regra é: **a tabela existe no banco primeiro. Depois a tela é construída.**
+
+Qualquer exceção a essa regra precisa ser explicitamente aprovada e documentada aqui.
+
+---
+
+### Por que o Meu Dia é o módulo mais complexo
+
+O Meu Dia é a tela de entrada de todos os usuários. Ele não tem dados próprios — ele consome dados de praticamente todos os outros módulos do sistema.
+
+Para o OwnerMeuDia funcionar completamente precisa de:
+`orders`, `tasks`, `clients`, `quotes`, `sellers`, `interactions`, `seller_levels`, `seller_errors`, `seller_stars`, `user_medals`, `medals`, `daily_focus`
+
+Para o AdminMeuDia (Anna) funcionar precisa de:
+`tasks`, `routines`, `process_pendencies`, `purchase_requests`, `fin_payables`
+
+Para o LogisticaMeuDia (Adriana) funcionar precisa de:
+`tasks`, `routines`, `orders`, `products`, `stock_movements`
+
+Para o ActionCenterVendedor funcionar precisa de:
+`tasks`, `clients`, `orders`, `interactions`, `daily_goals`, `quotes`, `seller_levels`
+
+Por isso o Meu Dia é construído por último — depois que todas as dependências existem.
+
+---
+
+### Por que o Cláudio tem cockpit separado
+
+O Cláudio é entregador, não vendedor. Ele usa o sistema exclusivamente pelo celular, em campo, durante as entregas. Mostrar para ele a mesma interface dos vendedores (com CRM, metas, fila de clientes) seria inútil e confuso.
+
+O EntregadorDashboard (/entregador) é uma interface mobile-first com navegação própria (bottom navigation, não sidebar). Tem apenas 3 abas: Entregas, Tarefas e Perfil.
+
+O roteamento é automático: quando `sellers.department = 'entregas'`, o sistema redireciona para `/entregador` imediatamente após o login.
+
+**Cláudio NÃO deve aparecer na fila de vendedores, no ranking de vendas, nem em nenhuma métrica comercial.**
+
+---
+
+### Por que o campo sellers.department é crítico
+
+O campo `department` na tabela `sellers` é o que controla qual cockpit cada pessoa vê ao entrar no sistema. Se esse campo estiver errado, a pessoa vê a tela de outro perfil.
+
+Mapeamento obrigatório:
+- `department = 'financeiro_gestora'` → AdminMeuDia (Anna Cristina)
+- `department = 'logistica'` → LogisticaMeuDia (Adriana)
+- `department = 'entregas'` → EntregadorDashboard (Cláudio)
+- `role = 'owner'` → OwnerMeuDia (Henrique)
+- `is_sales_active = true` → ActionCenterVendedor (Joésio, Murilo, Nayara)
+
+Antes de construir qualquer tela de Meu Dia, verificar essa query:
+```sql
+SELECT name, email, role, department, is_sales_active, active 
+FROM sellers 
+WHERE active = true 
+ORDER BY name;
+```
+
+---
+
+### Por que existe o schema dual na tabela tasks
+
+A tabela `tasks` tem duas camadas de colunas:
+- **Colunas originais 2.0:** `status` (enum: open/done/cancelled), `priority` (enum: baixa/normal/alta/urgente), `due_date`, `assigned_to`
+- **Colunas CRM (adicionadas 26/03/2026):** `status_crm` (pendente/concluida/cancelada), `priority_crm`, `task_date`, `created_by_seller_id`, `assigned_to_seller_id`
+
+Os hooks SEMPRE usam as colunas CRM. Nunca os enums originais.
+
+Motivo: as colunas CRM foram adicionadas para compatibilidade com a lógica do Lovable sem quebrar a estrutura original do 2.0.
+
+---
+
+### Visão de futuro — SaaS
+
+O H&H Suprimentos Corporativos é o cliente zero. O sistema foi arquitetado desde o início como multi-tenant (`company_id` em todas as tabelas + RLS via `auth_company_id()`).
+
+Após validação completa na H&H (agosto/2026), o sistema será oferecido como SaaS para outras distribuidoras B2B de pequeno porte no Brasil. Cada empresa terá seus dados completamente isolados.
+
+Nome do produto: **H&H Control**
+Domínio futuro: hhcontrol.com.br
+
+Esse contexto é importante para entender por que certas decisões de arquitetura foram tomadas de forma mais robusta do que o necessário para uma empresa só — multi-tenancy, RLS rigoroso, company_id obrigatório em todo insert.

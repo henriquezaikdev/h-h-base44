@@ -26,14 +26,14 @@ function getGreeting(name: string) {
 
 function MetricCard({ label, value, color = 'neutral' }: { label: string; value: number; color?: 'neutral' | 'warning' | 'danger' | 'success' }) {
   return (
-    <div className="h-[72px] flex flex-col justify-between p-4 rounded-xl bg-card border border-border shadow-sm transition-all hover:shadow-md">
-      <span className="text-[11px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">{label}</span>
+    <div className="h-[72px] flex flex-col justify-between p-4 rounded-xl bg-white border border-gray-100 shadow-sm transition-all hover:shadow-md">
+      <span className="text-[11px] uppercase tracking-[0.08em] font-semibold text-gray-500">{label}</span>
       <span className={cn(
         "text-[22px] font-semibold leading-none",
-        value > 0 && color === 'danger' && "text-destructive",
+        value > 0 && color === 'danger' && "text-red-600",
         value > 0 && color === 'warning' && "text-amber-500",
-        value > 0 && color === 'success' && "text-emerald-500",
-        (color === 'neutral' || value === 0) && "text-foreground",
+        value > 0 && color === 'success' && "text-[#3B5BDB]",
+        (color === 'neutral' || value === 0) && "text-gray-900",
       )}>{value}</span>
     </div>
   );
@@ -114,14 +114,14 @@ export function OwnerTarefasTab({ sellers }: { sellers: SellerRow[] }) {
 
   const priorityLabel: Record<string, string> = { urgente: 'Urgente', alta: 'Alta', media: 'Media', baixa: 'Baixa' };
 
-  if (loading) return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  if (loading) return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-[#3B5BDB]" /></div>;
 
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-foreground">{getGreeting(seller?.name || 'Gestor')}</h2>
-          <p className="text-[13px] capitalize text-muted-foreground">{format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })}</p>
+          <h2 className="text-xl font-semibold text-gray-900">{getGreeting(seller?.name || 'Gestor')}</h2>
+          <p className="text-[13px] capitalize text-gray-500">{format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })}</p>
         </div>
       </div>
 
@@ -132,17 +132,17 @@ export function OwnerTarefasTab({ sellers }: { sellers: SellerRow[] }) {
         <MetricCard label="Delegadas Pendentes" value={delegatedByMe.length} />
       </div>
 
-      <div className="rounded-xl p-5 bg-card border border-border shadow-sm">
+      <div className="rounded-xl p-5 bg-white border border-gray-100 shadow-sm">
         <div className="flex items-center justify-between mb-4">
-          <span className="text-[11px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">Minhas Tarefas</span>
+          <span className="text-[11px] uppercase tracking-[0.08em] font-semibold text-gray-500">Minhas Tarefas</span>
           <Button size="sm" onClick={() => setDrawerOpen(true)} className="gap-1.5 text-[11px]">
             <Plus className="h-3 w-3" /> Nova Tarefa
           </Button>
         </div>
         {myTasks.length === 0 ? (
           <div className="text-center py-6">
-            <CheckCircle2 className="h-6 w-6 mx-auto mb-2 text-emerald-500" />
-            <p className="text-[13px] text-muted-foreground">Nenhuma tarefa pendente.</p>
+            <CheckCircle2 className="h-6 w-6 mx-auto mb-2 text-gray-300" strokeWidth={1.5} />
+            <p className="text-[13px] text-gray-500">Nenhuma tarefa pendente.</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -152,7 +152,7 @@ export function OwnerTarefasTab({ sellers }: { sellers: SellerRow[] }) {
               return (
                 <div key={p}>
                   <button onClick={() => setExpandedGroups(g => ({ ...g, [p]: !g[p] }))}
-                    className="flex items-center gap-2 text-[11px] uppercase tracking-[0.08em] font-semibold text-muted-foreground mb-2">
+                    className="flex items-center gap-2 text-[11px] uppercase tracking-[0.08em] font-semibold text-gray-500 mb-2">
                     {expandedGroups[p] ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                     {priorityLabel[p]} ({items.length})
                   </button>
@@ -161,29 +161,29 @@ export function OwnerTarefasTab({ sellers }: { sellers: SellerRow[] }) {
                       {items.map(t => (
                         <div key={t.id} className={cn(
                           "flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer hover:shadow-sm",
-                          t.taskDate && isBefore(new Date(t.taskDate), today) ? "border-destructive/20 bg-destructive/5" : "border-border bg-card"
+                          t.taskDate && isBefore(new Date(t.taskDate), today) ? "border-red-200 bg-red-50" : "border-gray-100 bg-white"
                         )} onClick={() => setEditingTask(t)}>
                           <div className="flex-1 min-w-0">
-                            <p className="text-[13px] font-medium truncate text-foreground">{t.title || t.clientName || 'Tarefa Geral'}</p>
+                            <p className="text-[13px] font-medium truncate text-gray-900">{t.title || t.clientName || 'Tarefa Geral'}</p>
                             {(t.planningNotes || t.notes) && (
-                              <p className="text-[11px] text-muted-foreground truncate mt-0.5">{t.planningNotes || t.notes}</p>
+                              <p className="text-[11px] text-gray-500 truncate mt-0.5">{t.planningNotes || t.notes}</p>
                             )}
                             <div className="flex items-center gap-2 mt-1">
-                              {t.taskDate && <span className="text-[11px] text-muted-foreground">{format(new Date(t.taskDate), 'dd/MM')}</span>}
+                              {t.taskDate && <span className="text-[11px] text-gray-500">{format(new Date(t.taskDate), 'dd/MM')}</span>}
                               {t.assignedToSellerId && sellerMap[t.assignedToSellerId] && (
-                                <span className="text-[11px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{sellerMap[t.assignedToSellerId]}</span>
+                                <span className="text-[11px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">{sellerMap[t.assignedToSellerId]}</span>
                               )}
                             </div>
                           </div>
                           <div className="flex items-center gap-1 shrink-0">
-                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-muted-foreground hover:text-primary" onClick={(e) => { e.stopPropagation(); setEditingTask(t); }}>
-                              <Eye className="h-3.5 w-3.5" />
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-gray-400 hover:text-[#3B5BDB]" onClick={(e) => { e.stopPropagation(); setEditingTask(t); }}>
+                              <Eye className="h-3.5 w-3.5" strokeWidth={1.5} />
                             </Button>
                             <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); completeTask(t.id); }} className="h-7 w-7 p-0">
-                              <CheckSquare className="h-4 w-4 text-emerald-500" />
+                              <CheckSquare className="h-4 w-4 text-[#3B5BDB]" strokeWidth={1.5} />
                             </Button>
-                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); setDeletingTaskId(t.id); }}>
-                              <Trash2 className="h-3.5 w-3.5" />
+                            <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-gray-400 hover:text-red-600" onClick={(e) => { e.stopPropagation(); setDeletingTaskId(t.id); }}>
+                              <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
                             </Button>
                           </div>
                         </div>
@@ -198,10 +198,10 @@ export function OwnerTarefasTab({ sellers }: { sellers: SellerRow[] }) {
       </div>
 
       {/* Delegated tasks */}
-      <div className="rounded-xl p-5 bg-card border border-border shadow-sm">
-        <span className="text-[11px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">Delegadas / Equipe</span>
+      <div className="rounded-xl p-5 bg-white border border-gray-100 shadow-sm">
+        <span className="text-[11px] uppercase tracking-[0.08em] font-semibold text-gray-500">Delegadas / Equipe</span>
         {delegatedByMe.length === 0 ? (
-          <p className="text-[13px] mt-4 text-center py-4 text-muted-foreground">Nenhuma tarefa delegada</p>
+          <p className="text-[13px] mt-4 text-center py-4 text-gray-500">Nenhuma tarefa delegada</p>
         ) : (
           <div className="space-y-4 mt-4">
             {Object.entries(delegatedGrouped).map(([sellerId, items]) => {
@@ -209,32 +209,32 @@ export function OwnerTarefasTab({ sellers }: { sellers: SellerRow[] }) {
               return (
                 <div key={sellerId}>
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold bg-muted text-muted-foreground">
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold bg-gray-100 text-gray-500">
                       {(sellerMap[sellerId] || '?')[0]}
                     </div>
-                    <span className="text-[13px] font-medium text-foreground">{sellerMap[sellerId] || 'Desconhecido'}</span>
-                    {hasOverdue && <span className="bg-destructive/10 text-destructive border border-destructive/30 px-1.5 py-0.5 rounded text-[10px] font-semibold">Atraso</span>}
+                    <span className="text-[13px] font-medium text-gray-900">{sellerMap[sellerId] || 'Desconhecido'}</span>
+                    {hasOverdue && <span className="bg-red-50 text-red-600 border border-red-200 px-1.5 py-0.5 rounded text-[10px] font-semibold">Atraso</span>}
                   </div>
                   <div className="space-y-1 ml-8">
                     {items.map(t => (
                       <div key={t.id} className={cn(
-                        "flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:ring-1 hover:ring-primary/30 transition-all",
-                        t.taskDate && isBefore(new Date(t.taskDate), today) ? "border-destructive/20 bg-destructive/5" : "border-border bg-card"
+                        "flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:ring-1 hover:ring-indigo-200 transition-all",
+                        t.taskDate && isBefore(new Date(t.taskDate), today) ? "border-red-200 bg-red-50" : "border-gray-100 bg-white"
                       )} onClick={() => setEditingTask(t)}>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[13px] truncate text-foreground">{t.title || t.clientName || 'Tarefa Geral'}</p>
-                          {t.taskDate && <span className="text-[11px] text-muted-foreground">{format(new Date(t.taskDate), 'dd/MM')}</span>}
+                          <p className="text-[13px] truncate text-gray-900">{t.title || t.clientName || 'Tarefa Geral'}</p>
+                          {t.taskDate && <span className="text-[11px] text-gray-500">{format(new Date(t.taskDate), 'dd/MM')}</span>}
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <span className={cn(
                             "text-[10px] px-1.5 py-0.5 rounded font-semibold border",
                             t.taskDate && isBefore(new Date(t.taskDate), today)
-                              ? 'bg-destructive/10 text-destructive border-destructive/30'
-                              : 'bg-muted text-muted-foreground border-border'
+                              ? 'bg-red-50 text-red-600 border-red-200'
+                              : 'bg-gray-100 text-gray-500 border-gray-200'
                           )}>
                             {t.taskDate && isBefore(new Date(t.taskDate), today) ? 'Atrasada' : 'Pendente'}
                           </span>
-                          <Button size="sm" onClick={(e) => { e.stopPropagation(); completeTask(t.id); }} className="h-7 px-2 text-xs bg-primary hover:bg-primary/90 text-primary-foreground">
+                          <Button size="sm" onClick={(e) => { e.stopPropagation(); completeTask(t.id); }} className="h-7 px-2 text-xs bg-[#3B5BDB] hover:bg-[#3B5BDB]/90 text-white">
                             Concluir
                           </Button>
                         </div>

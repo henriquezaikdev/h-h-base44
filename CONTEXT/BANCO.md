@@ -503,3 +503,153 @@ Os hooks usam as colunas CRM (status_crm, priority_crm, task_date, etc.)
 ## COMPONENTES DISPONÍVEIS
 - EmitirNFeButton — botão + modal de emissão NF-e (src/components/EmitirNFeButton.tsx)
 - 20 componentes shadcn/ui em src/components/ui/
+
+
+
+### routines
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| seller_id | uuid (fk → sellers) |
+| title | text |
+| department | text |
+| recurrence | text (daily, weekly, monthly) |
+| active | boolean default true |
+| last_generated_date | date |
+| created_at | timestamptz |
+| updated_at | timestamptz |
+
+### process_pendencies
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| owner_user_id | uuid (fk → sellers) |
+| title | text |
+| description | text |
+| type | text (COMPRAS, FINANCEIRO) |
+| status | text (ABERTA, RESOLVIDA) |
+| source | text (solicitacoes, cotacoes) |
+| related_id | uuid |
+| due_date | date |
+| created_at | timestamptz |
+| updated_at | timestamptz |
+
+### daily_goals
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| seller_id | uuid (fk → sellers) |
+| goal_date | date |
+| calls_target | integer default 18 |
+| whatsapp_target | integer default 15 |
+| calls_done | integer default 0 |
+| whatsapp_done | integer default 0 |
+| created_at | timestamptz |
+| updated_at | timestamptz |
+| UNIQUE | (seller_id, goal_date) |
+
+### medals
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| code | text (UNIQUE por company) |
+| name | text |
+| description | text |
+| tier | text (BRONZE, PRATA, OURO) |
+| created_at | timestamptz |
+
+### user_medals
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| user_id | uuid (fk → sellers) |
+| medal_id | uuid (fk → medals) |
+| earned_at | timestamptz |
+| period_key | text (ex: '2026-03') |
+| context_json | jsonb |
+| created_at | timestamptz |
+
+### xp_log
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| seller_id | uuid (fk → sellers) |
+| amount | integer |
+| reason | text |
+| source | text (tarefa, pedido, elogio) |
+| source_id | uuid |
+| created_at | timestamptz |
+
+### daily_focus
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| seller_id | uuid (fk → sellers) |
+| focus_date | date |
+| items | jsonb default '[]' |
+| created_at | timestamptz |
+| updated_at | timestamptz |
+| UNIQUE | (seller_id, focus_date) |
+
+---
+
+## ENTREGAS E VEÍCULOS
+
+### entregas_eo
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| cod_entrega | text |
+| os_id | text |
+| destinatario | text |
+| endereco | text |
+| controle_pedido | text |
+| pedido_id | uuid (fk → orders, nullable) |
+| status | text (PENDENTE, ENTREGUE) |
+| data_baixa | date |
+| hora_baixa | text |
+| entregador | text |
+| link | text |
+| observa_de_baixa | text |
+| created_at | timestamptz |
+| updated_at | timestamptz |
+| UNIQUE | (company_id, cod_entrega) |
+
+**XP:** cada entrega com status=ENTREGUE vale 5 XP para o entregador.
+
+### vehicle_fuel_logs
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| seller_id | uuid (fk → sellers) |
+| fuel_date | date |
+| km | numeric |
+| liters | numeric |
+| amount | numeric |
+| fuel_type | text (default: Gasolina) |
+| station | text |
+| created_at | timestamptz |
+
+### vehicle_maintenance_logs
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| seller_id | uuid (fk → sellers) |
+| title | text |
+| maintenance_type | text (default: Revisão) |
+| maintenance_date | date |
+| km | numeric |
+| cost | numeric |
+| supplier | text |
+| notes | text |
+| created_at | timestamptz |

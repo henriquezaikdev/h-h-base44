@@ -45,7 +45,7 @@
 - Perfil: CRM, metas, fila inteligente de clientes, tarefas comerciais
 
 ## Cláudio
-- Cargo: Vendedor
+- Cargo: Entregador 
 - Role: seller
 - Cockpit: ActionCenter
 - Status: ativo
