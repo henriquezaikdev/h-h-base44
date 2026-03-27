@@ -10,6 +10,7 @@ import {
   CheckSquare,
   LogOut,
   Sparkles,
+  Newspaper,
   type LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
@@ -31,14 +32,15 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { to: '/estoque',   label: 'Estoque',    icon: Boxes           },
   { to: '/financeiro',label: 'Financeiro', icon: Landmark        },
   { to: '/tarefas',   label: 'Tarefas',    icon: CheckSquare     },
+  { to: '/mural',     label: 'Mural',      icon: Newspaper       },
 ]
 
 const NAV_BY_ROLE: Record<SellerRole, string[]> = {
   owner:     ALL_NAV_ITEMS.map(i => i.to),
   admin:     ALL_NAV_ITEMS.map(i => i.to),
   manager:   ALL_NAV_ITEMS.map(i => i.to),
-  seller:    ['/meu-dia', '/clientes', '/pedidos', '/tarefas'],
-  logistics: ['/meu-dia', '/estoque', '/tarefas'],
+  seller:    ['/meu-dia', '/clientes', '/pedidos', '/tarefas', '/mural'],
+  logistics: ['/meu-dia', '/estoque', '/tarefas', '/mural'],
 }
 
 function getNavItems(role: SellerRole | null): NavItem[] {

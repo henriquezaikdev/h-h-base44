@@ -7,6 +7,7 @@ import { ActionCenterVendedor } from '@/components/action-center/ActionCenterVen
 import { Loader2, Search, Plus } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { MuralWidget } from '@/components/mural/MuralWidget'
 
 class OwnerErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -138,6 +139,8 @@ export default function OwnerMeuDia() {
           onSetWhatsappReportModalOpen={() => {}}
           onSetContactFilter={() => {}}
         />
+
+        <MuralWidget />
       </div>
     )
   }

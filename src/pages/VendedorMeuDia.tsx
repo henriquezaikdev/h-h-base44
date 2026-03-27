@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Loader2, Search, CheckSquare } from 'lucide-react'
 import { PriorityQueueSection } from '@/components/vendedor/PriorityQueueSection'
 import { RadarCarteira } from '@/components/vendedor/RadarCarteira'
+import { MuralWidget } from '@/components/mural/MuralWidget'
 import { format, isBefore, startOfDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { toast } from 'sonner'
@@ -191,6 +192,8 @@ export default function VendedorMeuDia() {
             <PriorityQueueSection />
 
             <RadarCarteira />
+
+            <MuralWidget />
           </div>
         )}
 
