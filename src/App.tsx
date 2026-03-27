@@ -17,11 +17,11 @@ import FinanceiroPage from './pages/financial/FinanceiroPage'
 import ComprasPage from './pages/purchases/ComprasPage'
 import EstoquePage from './pages/stock/EstoquePage'
 import TarefasPage from './pages/tasks/TarefasPage'
-import ActionCenter from './pages/ActionCenter'
 import EntregadorDashboard from './pages/EntregadorDashboard'
 import AdminMeuDia from './pages/AdminMeuDia'
 import LogisticaMeuDia from './pages/LogisticaMeuDia'
 import OwnerMeuDia from './pages/OwnerMeuDia'
+import VendedorMeuDia from './pages/VendedorMeuDia'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -96,7 +96,7 @@ export default function App() {
             <Route path="/owner"     element={<OwnerMeuDia />} />
             <Route path="/admin"     element={<AdminMeuDia />} />
             <Route path="/logistica" element={<LogisticaMeuDia />} />
-            <Route path="/vendedor"  element={<ActionCenter />} />
+            <Route path="/vendedor"  element={<VendedorMeuDia />} />
 
             {/* Compatibilidade — mantém /meu-dia funcionando */}
             <Route path="/meu-dia" element={<Navigate to="/" replace />} />

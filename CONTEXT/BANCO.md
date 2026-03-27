@@ -653,3 +653,34 @@ Os hooks usam as colunas CRM (status_crm, priority_crm, task_date, etc.)
 | supplier | text |
 | notes | text |
 | created_at | timestamptz |
+
+---
+
+## GAMIFICAÇÃO — METAS E CONQUISTAS POR CATEGORIA
+
+### category_goals
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| seller_id | uuid (fk → sellers) |
+| category_key | text |
+| competencia | text (formato: '2026-03') |
+| meta_valor | numeric |
+| created_at | timestamptz |
+| updated_at | timestamptz |
+| UNIQUE | (seller_id, category_key, competencia) |
+
+### category_achievements
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| seller_id | uuid (fk → sellers) |
+| category_key | text |
+| competencia | text (formato: '2026-03') |
+| stars_earned | integer |
+| xp_earned | integer |
+| bonus_pct | numeric |
+| created_at | timestamptz |
+| UNIQUE | (seller_id, category_key, competencia) |

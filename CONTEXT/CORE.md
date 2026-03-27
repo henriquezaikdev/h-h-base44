@@ -160,38 +160,37 @@ Módulos pendentes:
 Data: 27/03/2026
 
 Último concluído:
-- OwnerMeuDia completo com 5 abas funcionais (Vendas, Tarefas, Equipe, Perfil, Evolução)
-- 20 componentes shadcn/ui criados
-- 10 hooks de dados criados e corrigidos para schema real do banco 2.0
-- Schema dual em tasks: colunas CRM (status_crm, priority_crm, task_date, etc.) adicionadas
-- Hooks usam colunas CRM: status_crm (pendente/concluida), priority_crm, task_date, created_by_seller_id, assigned_to_seller_id
-- Sellers: filtro .or('status.eq.ATIVO,status.is.null'), duplicados desativados
-- Timezone UTC→BRT corrigido (toBrtDateStr com .replace(' ', 'T'))
-- Gráfico de Evolução mostra Vendas + Tarefas por dia
-- SQL de gamificação gerado (seller_levels, seller_errors, seller_stars, work_month_config, interactions)
-- QueryClientProvider adicionado no App.tsx
-- Build TypeScript 100% limpo
-- Commit final: 8563c58 (42 arquivos, +15.365 linhas)
+- Diagnóstico completo do banco (52 tabelas mapeadas)
+- Duplicatas identificadas: xp_log/xp_logs (ambas vazias — usar xp_log), purchase_cotacoes/purchase_quotes
+- Tabelas populadas: work_month_config (mar/abr/mai 2026), seller_levels (Joésio R$35k, Murilo R$35k, Nayara R$30k), seller_stars
+- Tabelas criadas: category_goals, category_achievements (com RLS)
+- VendedorMeuDia.tsx criado — 4 abas: Meu Dia, Tarefas, Perfil, Evolução
+- ActionCenter.tsx removido do App.tsx
+- EvolutionEmbed completo com dados reais:
+  - PerformanceTab: vendas, pedidos, tarefas, TBM, contatos (ligações/whatsapp), sem framer-motion, sem tokens shadcn
+  - ComissaoNivelTab: nível real do banco, comissão por faixa de margem_real, bônus por categoria, regra de aceleração
+  - RegrasTab: limpeza de design concluída
+  - Label "Comissão & Nível" com acentuação corrigida no EvolutionEmbed.tsx
+- useEvolutionData expandido com 12 novos campos: metaMensal, ligacoesMes, whatsappMes, metaLigacoes, metaWhatsapp, tbm, sellerLevel, comissaoBase, comissaoCategorias, comissaoTotal, pedidosSemMargem, aceleracaoAtiva
+- HH_CONTROL_PLANEJAMENTO.md gerado em CONTEXT/
 
 Em andamento:
-- Aba Evolução: Performance incompleta (falta visual fiel ao Lovable)
-- SQL de gamificação aguardando execução no Supabase
+- Aba Campanhas no EvolutionEmbed — placeholder (tabelas não criadas)
+- margem_real em orders — preenchida em apenas 34% dos pedidos migrados (2.482 de 7.272)
+- interactions vazia — contatos reais dependem de registro via sistema
+- Dados históricos do Cláudio para entregas_eo — não importados
 
 Próximo passo:
-1. Rodar SQL de gamificação no Supabase (supabase/migrations/20260326_gamificacao.sql)
-2. Completar aba Evolução — Performance fiel ao Lovable
-3. Construir AdminMeuDia (Anna Cristina)
-4. Construir LogisticaMeuDia (Adriana)
-5. Corrigir ActionCenter do vendedor
+1. Fila inteligente de prioridades (priority_score em clients)
+2. Radar da Carteira (anéis: ativo/recompra/atraso/risco)
+3. Deploy Vercel + GitHub
+4. Mural social (mural_posts já existe no banco)
 
 Observações:
-- order_number é tipo text — sempre comparar com aspas simples
-- UPDATE em massa: usar SET session_replication_role = replica para bypassar RLS
-- JOIN orders → sellers é ambíguo (duas FKs) — usar query separada
-- RLS sellers: nunca subquery direto na policy — usar get_my_company_id()
-- tasks tem schema dual: colunas originais 2.0 (status enum, priority enum) + colunas CRM (status_crm, priority_crm)
-- Hooks SEMPRE usam colunas CRM, nunca os enums originais
-- completed_at pode ser null em tarefas antigas — usar task_date como fallback
-- useDailyFocus usa localStorage como fallback (tabela daily_focus futura)
-- useTaskLimits usa defaults hardcoded (tabela app_config futura)
-- Gamificação: SQL gerado mas tabelas ainda não criadas no banco
+- commission_pct em order_items: 100% zerado — irrelevante, comissão usa margem_real
+- Comissão base: faixas por margem_real (0.45→2%, 0.35→1.3%, 0.20→1%, 0.005→0.5%)
+- Regra de aceleração: vendas >= 130% da meta → faixas mais agressivas
+- Bônus categoria: meta batida + margem >= 40% → +0.5% | >= 60% → +1.0%
+- Bloqueio bônus: seller_errors >= 4 no mês → bônus zerado para todas as categorias
+- seller_levels.monthly_sales_target: Joésio e Murilo R$35k, Nayara R$30k
+- xp_log é a tabela padrão — ignorar xp_logs

@@ -24,7 +24,7 @@ interface Seller {
 
 const tabConfig = [
   { value: 'performance', label: 'Performance', icon: BarChart3 },
-  { value: 'commission', label: 'Comissao & Nivel', icon: Calculator },
+  { value: 'commission', label: 'Comissão & Nível', icon: Calculator },
   { value: 'campaigns', label: 'Campanhas', icon: Trophy },
   { value: 'rules', label: 'Regras', icon: FileText },
 ];

@@ -302,3 +302,36 @@ Nome do produto: **H&H Control**
 Domínio futuro: hhcontrol.com.br
 
 Esse contexto é importante para entender por que certas decisões de arquitetura foram tomadas de forma mais robusta do que o necessário para uma empresa só — multi-tenancy, RLS rigoroso, company_id obrigatório em todo insert.
+
+## EVOLUÇÃO DO VENDEDOR — REGRAS DE COMISSÃO (27/03/2026)
+
+### Comissão base por pedido (margem_real de orders)
+- margem_real >= 0.45 → 2.0%
+- margem_real >= 0.35 → 1.3%
+- margem_real >= 0.20 → 1.0%
+- margem_real >= 0.005 → 0.5%
+- margem_real < 0.005 → 0%
+
+### Regra de aceleração (vendas >= 130% da meta mensal)
+- margem_real >= 0.30 → 2.0%
+- margem_real >= 0.15 → 1.0%
+- margem_real >= 0.005 → 0.5%
+- margem_real < 0.005 → 0%
+
+### Bônus por categoria
+- Condições obrigatórias (ambas): realizado >= meta da categoria E margem_media >= 0.40
+- margem_media >= 0.60 → +1.0%
+- margem_media >= 0.40 → +0.5%
+- Bloqueio: seller_errors do mês >= 4 → bônus = 0 para todas as categorias
+
+### Metas de contato por nível
+- Ovo: 18 ligações/dia × dias úteis | 15 whatsapp/dia × dias úteis
+- Pena/Águia: 210 ligações/mês | 336 whatsapp/mês
+
+### Tabelas criadas em 27/03/2026
+- category_goals: metas personalizadas por vendedor/categoria/competência (seller_id, category_key, competencia, meta_valor)
+- category_achievements: registro de conquistas por categoria (seller_id, category_key, competencia, stars_earned, xp_earned, bonus_pct)
+
+### Duplicatas resolvidas
+- xp_log → tabela padrão (usar sempre esta)
+- xp_logs → ignorar (vazia, não remover para não quebrar queries existentes)
