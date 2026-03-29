@@ -4,6 +4,7 @@ import {
   Users, UserPlus, RefreshCw, Clock, AlertTriangle, XCircle,
   Search, LayoutGrid, List, ChevronRight, ChevronLeft,
   Phone, MessageCircle, ArrowRight, TrendingUp, X, MapPin, FileText,
+  Building2,
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
@@ -32,9 +33,13 @@ interface RawClient {
   seller_id: string
   created_at: string
   last_contact_at: string | null
+  origem: string | null
+  reativado_em: string | null
   sellers: { name: string } | null
   orders: RawOrder[]
 }
+
+type OrigemFilter = 'all' | 'novo' | 'inativo' | 'reativado' | 'filial' | 'indicacao'
 
 interface ClientRow {
   id: string
@@ -51,6 +56,9 @@ interface ClientRow {
   lastOrderDate: string | null
   daysSinceLastOrder: number | null
   daysSinceContact: number | null
+  origem: string | null
+  reativado_em: string | null
+  created_at: string
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -89,6 +97,9 @@ function toRow(c: RawClient): ClientRow {
     lastOrderDate:      lastOrder?.created_at ?? null,
     daysSinceLastOrder: days,
     daysSinceContact:   daysSince(c.last_contact_at),
+    origem:             c.origem,
+    reativado_em:       c.reativado_em,
+    created_at:         c.created_at,
   }
 }
 
@@ -161,6 +172,50 @@ function ContactDot({ days }: { days: number | null }) {
   return <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${cls}`} />
 }
 
+function OriginBadges({ c }: { c: ClientRow }) {
+  const badges: { label: string; bg: string; text: string }[] = []
+  const createdDaysAgo = daysSince(c.created_at)
+  const isNew = createdDaysAgo !== null && createdDaysAgo <= 30
+
+  // Filial badge — always, never gets "Novo"
+  if (c.origem === 'filial') {
+    badges.push({ label: 'Filial', bg: 'bg-purple-50', text: 'text-purple-700' })
+  } else if (isNew) {
+    // Novo badges by origin
+    if (c.origem === 'indicacao') {
+      badges.push({ label: 'Novo · Indicação', bg: 'bg-emerald-50', text: 'text-emerald-700' })
+    } else if (c.origem === 'google') {
+      badges.push({ label: 'Novo · Google', bg: 'bg-slate-100', text: 'text-slate-600' })
+    } else if (c.origem && ['ligacao', 'porta_loja', 'conquistado'].includes(c.origem)) {
+      badges.push({ label: 'Novo · Prospecção', bg: 'bg-[#EEF2FF]', text: 'text-[#3B5BDB]' })
+    } else {
+      badges.push({ label: 'Novo', bg: 'bg-[#EEF2FF]', text: 'text-[#3B5BDB]' })
+    }
+  }
+
+  // Inativo badge
+  if (c.status === 'inactive') {
+    badges.push({ label: 'Inativo', bg: 'bg-red-50', text: 'text-red-600' })
+  }
+
+  // Reativado badge
+  if (c.reativado_em && c.status === 'active') {
+    badges.push({ label: 'Reativado', bg: 'bg-amber-50', text: 'text-amber-700' })
+  }
+
+  if (badges.length === 0) return null
+
+  return (
+    <div className="flex items-center gap-1 flex-wrap">
+      {badges.map((b, i) => (
+        <span key={i} className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium leading-tight ${b.bg} ${b.text}`}>
+          {b.label}
+        </span>
+      ))}
+    </div>
+  )
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 interface ClientesQueryResult {
@@ -181,7 +236,10 @@ export default function ClientesPage() {
   const [classFilter,     setClassFilter]     = useState<KpiKey>('all')
   const [viewMode,        setViewMode]        = useState<ViewMode>('table')
   const [page,            setPage]            = useState(1)
-  const [newClientOpen,   setNewClientOpen]   = useState(false)
+  const [originPickerOpen, setOriginPickerOpen] = useState(false)
+  const [newClientOpen,    setNewClientOpen]    = useState(false)
+  const [selectedOrigem,   setSelectedOrigem]   = useState<string>('')
+  const [origemFilter,     setOrigemFilter]     = useState<OrigemFilter>('all')
 
   // ── Fetch ────────────────────────────────────────────────────────────────
 
@@ -212,7 +270,7 @@ export default function ClientesPage() {
   const clients     = useMemo(() => (data?.clients     ?? []).map(toRow), [data])
   const sellersList = data?.sellersList ?? []
 
-  useEffect(() => { setPage(1) }, [search, statusFilter, sellerFilter, classFilter])
+  useEffect(() => { setPage(1) }, [search, statusFilter, sellerFilter, classFilter, origemFilter])
 
   // ── Derived ──────────────────────────────────────────────────────────────
 
@@ -222,13 +280,23 @@ export default function ClientesPage() {
       if (statusFilter !== 'all' && c.status !== statusFilter)                      return false
       if (canSeeVendedor && sellerFilter !== 'all' && c.seller_id !== sellerFilter) return false
       if (classFilter   !== 'all' && c.classification !== classFilter)              return false
+      // Origem filter
+      if (origemFilter !== 'all') {
+        const createdDaysAgo = daysSince(c.created_at)
+        const isNew = createdDaysAgo !== null && createdDaysAgo <= 30 && c.origem !== 'filial'
+        if (origemFilter === 'novo' && !isNew)                                     return false
+        if (origemFilter === 'inativo' && c.status !== 'inactive')                 return false
+        if (origemFilter === 'reativado' && !(c.reativado_em && c.status === 'active')) return false
+        if (origemFilter === 'filial' && c.origem !== 'filial')                    return false
+        if (origemFilter === 'indicacao' && c.origem !== 'indicacao')              return false
+      }
       if (q) {
         const digits = (c.cnpj ?? '').replace(/\D/g, '')
         if (!c.name.toLowerCase().includes(q) && !digits.includes(q))              return false
       }
       return true
     })
-  }, [clients, search, statusFilter, sellerFilter, classFilter, canSeeVendedor])
+  }, [clients, search, statusFilter, sellerFilter, classFilter, origemFilter, canSeeVendedor])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -257,7 +325,13 @@ export default function ClientesPage() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setNewClientOpen(true)}
+            onClick={() => navigate('/clientes/inativos')}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#374151] border border-[#E5E7EB] rounded-lg hover:bg-[#F9FAFB] transition-colors"
+          >
+            <XCircle size={14} /> Inativos
+          </button>
+          <button
+            onClick={() => setOriginPickerOpen(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-[#3B5BDB] text-white rounded-lg hover:bg-[#3451C7] transition-colors"
           >
             <UserPlus size={14} /> Novo Cliente
@@ -345,6 +419,19 @@ export default function ClientesPage() {
               <option value="inativo">Inativo</option>
             </select>
 
+            <select
+              value={origemFilter}
+              onChange={e => setOrigemFilter(e.target.value as OrigemFilter)}
+              className="text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 text-[#374151] outline-none focus:border-[#3B5BDB] bg-white transition"
+            >
+              <option value="all">Todas as origens</option>
+              <option value="novo">Novo</option>
+              <option value="inativo">Inativo</option>
+              <option value="reativado">Reativado</option>
+              <option value="filial">Filial</option>
+              <option value="indicacao">Indicação</option>
+            </select>
+
             {canSeeVendedor && (
               <select
                 value={sellerFilter}
@@ -408,7 +495,10 @@ export default function ClientesPage() {
                         <div className="flex items-start gap-2">
                           <HealthDot cls={c.classification} />
                           <div className="min-w-0">
-                            <p className="font-medium text-[#111827] truncate max-w-52">{c.name}</p>
+                            <div className="flex items-center gap-1.5">
+                              <p className="font-medium text-[#111827] truncate max-w-52">{c.name}</p>
+                              <OriginBadges c={c} />
+                            </div>
                             <p className="text-xs text-[#9CA3AF] mt-0.5 font-mono">{formatCNPJ(c.cnpj)}</p>
                           </div>
                         </div>
@@ -495,6 +585,7 @@ export default function ClientesPage() {
                         <div className="min-w-0">
                           <p className="font-medium text-[#111827] text-sm truncate leading-tight">{c.name}</p>
                           <p className="text-xs text-[#9CA3AF] mt-0.5 font-mono">{formatCNPJ(c.cnpj)}</p>
+                          <OriginBadges c={c} />
                         </div>
                       </div>
                       <StatusBadge status={c.status} />
@@ -563,12 +654,118 @@ export default function ClientesPage() {
 
       </div>
 
-      {newClientOpen && (
-        <NewClientModal
-          onClose={() => setNewClientOpen(false)}
-          onSaved={() => { setNewClientOpen(false); refetch() }}
+      {originPickerOpen && (
+        <OriginPickerModal
+          onClose={() => setOriginPickerOpen(false)}
+          onSelect={(origem) => {
+            setSelectedOrigem(origem)
+            setOriginPickerOpen(false)
+            setNewClientOpen(true)
+          }}
         />
       )}
+
+      {newClientOpen && (
+        <NewClientModal
+          initialOrigem={selectedOrigem}
+          onClose={() => { setNewClientOpen(false); setSelectedOrigem('') }}
+          onSaved={() => { setNewClientOpen(false); setSelectedOrigem(''); refetch() }}
+        />
+      )}
+    </div>
+  )
+}
+
+// ─── OriginPickerModal ────────────────────────────────────────────────────────
+
+const ORIGIN_OPTIONS = [
+  { value: 'ligacao',   label: 'Prospecção', desc: 'Contato ativo por telefone', icon: Phone },
+  { value: 'google',    label: 'Google',     desc: 'Encontrou via busca online',  icon: Search },
+  { value: 'indicacao', label: 'Indicação',  desc: 'Indicado por outro cliente',  icon: Users },
+  { value: 'filial',    label: 'Filial',     desc: 'Unidade filial de grupo',     icon: Building2 },
+] as const
+
+function OriginPickerModal({ onClose, onSelect }: { onClose: () => void; onSelect: (v: string) => void }) {
+  const [selected, setSelected] = useState<string | null>(null)
+
+  // Fechar com Escape
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [onClose])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-xl w-full max-w-md"
+        onClick={e => e.stopPropagation()}
+      >
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB]">
+          <div>
+            <h2 className="text-base font-semibold text-[#111827]">Novo Cliente</h2>
+            <p className="text-sm text-[#6B7280] mt-0.5">Como esse cliente chegou até nós?</p>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Fechar"
+            className="p-2 rounded-lg text-[#9CA3AF] hover:text-[#374151] hover:bg-[#F3F4F6] transition-colors"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Options */}
+        <div className="px-6 py-5 grid grid-cols-2 gap-3">
+          {ORIGIN_OPTIONS.map(({ value, label, desc, icon: Icon }) => {
+            const active = selected === value
+            return (
+              <button
+                key={value}
+                onClick={() => setSelected(value)}
+                className={`flex flex-col items-center text-center p-4 rounded-xl border-2 transition-all min-h-[112px] ${
+                  active
+                    ? 'border-[#3B5BDB] bg-[#EEF2FF] shadow-[0_0_0_1px_rgba(59,91,219,0.2)]'
+                    : 'border-[#E5E7EB] hover:border-[#C7D2FE] bg-white'
+                }`}
+              >
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-2 transition-colors ${
+                  active ? 'bg-[#3B5BDB] text-white' : 'bg-[#F9FAFB] text-[#6B7280]'
+                }`}>
+                  <Icon size={18} />
+                </div>
+                <span className={`text-sm font-medium transition-colors ${active ? 'text-[#3B5BDB]' : 'text-[#111827]'}`}>
+                  {label}
+                </span>
+                <span className="text-xs text-[#9CA3AF] mt-0.5 leading-tight">{desc}</span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-[#E5E7EB] flex items-center justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-[#374151] border border-[#E5E7EB] rounded-lg hover:bg-[#F9FAFB] transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={() => selected && onSelect(selected)}
+            disabled={!selected}
+            className="px-4 py-2 text-sm font-medium bg-[#3B5BDB] text-white rounded-lg hover:bg-[#3451C7] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            Continuar
+          </button>
+        </div>
+
+      </div>
     </div>
   )
 }
@@ -607,9 +804,19 @@ const EMPTY = {
   codigo_ibge: '',
 }
 
-function NewClientModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+const ORIGEM_LABELS: Record<string, string> = {
+  ligacao: 'Prospecção',
+  google: 'Google',
+  indicacao: 'Indicação',
+  filial: 'Filial',
+  porta_loja: 'Porta a porta',
+  conta_azul: 'Conta Azul',
+  conquistado: 'Conquistado',
+}
+
+function NewClientModal({ onClose, onSaved, initialOrigem = '' }: { onClose: () => void; onSaved: () => void; initialOrigem?: string }) {
   const { seller } = useAuth()
-  const [form, setForm]         = useState(EMPTY)
+  const [form, setForm]         = useState({ ...EMPTY, origem: initialOrigem })
   const [saving, setSaving]     = useState(false)
   const [errMsg, setErrMsg]     = useState<string | null>(null)
   const [cnpjLoading, setCnpjLoading] = useState(false)
@@ -782,14 +989,21 @@ function NewClientModal({ onClose, onSaved }: { onClose: () => void; onSaved: ()
 
               <div>
                 <ModalLabel>Origem</ModalLabel>
-                <select value={form.origem} onChange={e => setForm(p => ({ ...p, origem: e.target.value }))} className={SELECT_CLS}>
-                  <option value="">Selecionar…</option>
-                  <option value="Google">Google</option>
-                  <option value="Indicação">Indicação</option>
-                  <option value="WhatsApp">WhatsApp</option>
-                  <option value="Instagram">Instagram</option>
-                  <option value="Outro">Outro</option>
-                </select>
+                {initialOrigem ? (
+                  <div className="flex items-center gap-2 px-3 py-1.5 text-sm border border-[#E5E7EB] rounded-lg bg-[#F9FAFB] text-[#374151]">
+                    <span>{ORIGEM_LABELS[initialOrigem] ?? initialOrigem}</span>
+                  </div>
+                ) : (
+                  <select value={form.origem} onChange={e => setForm(p => ({ ...p, origem: e.target.value }))} className={SELECT_CLS}>
+                    <option value="">Selecionar…</option>
+                    <option value="ligacao">Prospecção</option>
+                    <option value="google">Google</option>
+                    <option value="indicacao">Indicação</option>
+                    <option value="filial">Filial</option>
+                    <option value="porta_loja">Porta a porta</option>
+                    <option value="conquistado">Conquistado</option>
+                  </select>
+                )}
               </div>
 
               <div>

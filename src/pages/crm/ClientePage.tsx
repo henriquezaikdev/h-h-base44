@@ -161,6 +161,16 @@ const STATUS_CFG: Record<string, { label: string; text: string; bg: string }> = 
   at_risk:  { label: 'Em Risco',   text: 'text-red-700',     bg: 'bg-red-50'     },
 }
 
+const ORIGEM_DISPLAY: Record<string, string> = {
+  ligacao: 'Prospecção',
+  google: 'Google',
+  indicacao: 'Indicação',
+  filial: 'Filial',
+  porta_loja: 'Porta a porta',
+  conta_azul: 'Conta Azul',
+  conquistado: 'Conquistado',
+}
+
 const PRIORITY_CFG: Record<string, { label: string; text: string; bg: string }> = {
   high:   { label: 'Alta',  text: 'text-red-600',   bg: 'bg-red-50'   },
   medium: { label: 'Média', text: 'text-amber-600', bg: 'bg-amber-50' },
@@ -176,6 +186,47 @@ const MONTHS = [
 
 function Badge({ children, cls }: { children: React.ReactNode; cls: string }) {
   return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>{children}</span>
+}
+
+function ClientOriginBadges({ client }: { client: Client }) {
+  const badges: { label: string; bg: string; text: string }[] = []
+  const createdDaysAgo = daysSince(client.created_at)
+  const isNew = createdDaysAgo !== null && createdDaysAgo <= 30
+
+  if (client.origem === 'filial') {
+    badges.push({ label: 'Filial', bg: 'bg-purple-50', text: 'text-purple-700' })
+  } else if (isNew) {
+    if (client.origem === 'indicacao') {
+      badges.push({ label: 'Novo · Indicação', bg: 'bg-emerald-50', text: 'text-emerald-700' })
+    } else if (client.origem === 'google') {
+      badges.push({ label: 'Novo · Google', bg: 'bg-slate-100', text: 'text-slate-600' })
+    } else if (client.origem && ['ligacao', 'porta_loja', 'conquistado'].includes(client.origem)) {
+      badges.push({ label: 'Novo · Prospecção', bg: 'bg-[#EEF2FF]', text: 'text-[#3B5BDB]' })
+    } else {
+      badges.push({ label: 'Novo', bg: 'bg-[#EEF2FF]', text: 'text-[#3B5BDB]' })
+    }
+  }
+
+  if (client.status === 'inactive') {
+    badges.push({ label: 'Inativo', bg: 'bg-red-50', text: 'text-red-600' })
+  }
+
+  // reativado_em may not exist yet — safe access
+  const reativadoEm = (client as unknown as Record<string, unknown>).reativado_em as string | null | undefined
+  if (reativadoEm && client.status === 'active') {
+    badges.push({ label: 'Reativado', bg: 'bg-amber-50', text: 'text-amber-700' })
+  }
+
+  if (badges.length === 0) return null
+  return (
+    <>
+      {badges.map((b, i) => (
+        <span key={i} className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium ${b.bg} ${b.text}`}>
+          {b.label}
+        </span>
+      ))}
+    </>
+  )
 }
 
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -599,6 +650,7 @@ export default function ClientePage() {
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl font-semibold text-[#111827]">{client.name}</h1>
               <Badge cls={`${statusCfg.bg} ${statusCfg.text}`}>{statusCfg.label}</Badge>
+              <ClientOriginBadges client={client} />
               {client.classification && (
                 <Badge cls="bg-[#EEF2FF] text-[#3B5BDB]">{client.classification}</Badge>
               )}
@@ -832,14 +884,16 @@ export default function ClientePage() {
                         onChange={e => setForm(p => ({ ...p, origem: e.target.value }))}
                         className={SELECT_CLS}
                       >
-                        <option value="">Selecionar…</option>
-                        <option value="Google">Google</option>
-                        <option value="Indicacao">Indicação</option>
-                        <option value="WhatsApp">WhatsApp</option>
-                        <option value="Instagram">Instagram</option>
-                        <option value="Outro">Outro</option>
+                        <option value="">Não informado</option>
+                        <option value="ligacao">Prospecção</option>
+                        <option value="google">Google</option>
+                        <option value="indicacao">Indicação</option>
+                        <option value="filial">Filial</option>
+                        <option value="porta_loja">Porta a porta</option>
+                        <option value="conta_azul">Conta Azul</option>
+                        <option value="conquistado">Conquistado</option>
                       </select>
-                    ) : <ReadValue value={client.origem} />}
+                    ) : <ReadValue value={ORIGEM_DISPLAY[client.origem ?? ''] ?? client.origem ?? 'Não informado'} />}
                   </div>
 
                   <div>
