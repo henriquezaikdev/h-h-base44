@@ -58,6 +58,15 @@ Nunca traduzir nomes automaticamente.
 | intervalo_medio_dias | integer |
 | proxima_compra_estimada | date |
 | reativacao_score | numeric default 0 |
+| reativacao_iniciada | boolean default false |
+| reativacao_iniciada_em | timestamptz |
+| reativacao_status | varchar(20) default null |
+| reativacao_concluida | boolean default false |
+| reativacao_concluida_em | timestamptz |
+| reativacao_motivo_perda | text |
+| reativacao_sugestao_ia | text |
+| ticket_medio_mensal | numeric default 0 |
+| ultimo_pedido_em | timestamptz |
 
 ### buyers
 | Coluna | Tipo |
@@ -706,3 +715,17 @@ Os hooks usam as colunas CRM (status_crm, priority_crm, task_date, etc.)
 | xp_gerado | integer |
 | streak_dia | integer |
 | multiplicador | numeric default 1.0 |
+
+---
+
+### reativacao_contatos
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| client_id | uuid (fk → clients) |
+| seller_id | uuid (fk → sellers) |
+| tipo | varchar(30) NOT NULL |
+| resultado | varchar(50) |
+| observacao | text |
+| created_at | timestamptz |
