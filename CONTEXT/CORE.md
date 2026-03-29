@@ -157,42 +157,27 @@ Módulos pendentes:
 - Primeiros clientes externos distribuidoras B2B
 
 ## STATUS ATUAL
-Data: 27/03/2026
+Data: 29/03/2026
 
 Último concluído:
-- Etapa C completa: PriorityQueueSection, RadarCarteira, AssistenteCliente (ClientAIChat)
-- ANTHROPIC_API_KEY cadastrada nos secrets do Supabase
-- Etapa E completa: GitHub (henriquezaikdev/hh-control-2) + Vercel (hh-control-2.vercel.app)
-- Mural Social completo: MuralPage + MuralWidget + rota /mural + sidebar (commit 0e49dd0)
-- Logins da equipe criados e vinculados no Supabase Auth (7 usuários)
-- PLANEJAMENTO.md substituído pelo planejamento completo revisado (leitura do código Lovable)
-- enum client_status mapeado: active, reorder, delayed, at_risk, inactive
-- priority_score calculado e gravado em clients
+- Bloco 1 completo: OriginPickerModal (6 origens: prospeccao, google, indicacao, filial, porta_loja, outro), badges na listagem, campo origem na ficha, KanbanInativosPage criado (rota /clientes/inativos)
+- Commit 455226f deployado no Vercel (produção)
+- SQLs Bloco Inativos executados: colunas janela_longa, intervalo_medio_dias, proxima_compra_estimada, reativacao_score em clients; ui_mode em sellers
 
 Em andamento:
-- Aba Campanhas no EvolutionEmbed — placeholder (tabelas não criadas)
-- margem_real em orders — 34% de cobertura
-- interactions vazia — depende de registro via sistema
+- Super Tela de Inativos (reconstrução completa — KanbanInativosPage atual não carrega dados)
+- SQL 3 pendente: CREATE TABLE client_reativacoes
 
 Próximo passo:
-1. Bloco 1 — Identificação de clientes:
-   - Verificar campo reativado_em e valores de clients.origem no SQL Editor
-   - Badge de identificação na ClientesPage
-   - Kanban de clientes inativos (/clientes/inativos)
-2. Bloco 2 — Configurações (/configuracoes)
+1. Novo chat — rodar SQL 3 (client_reativacoes)
+2. Deploy Edge Functions: calcular-score-reativacao, classificar-janela-longa
+3. Reconstruir KanbanInativosPage.tsx — Modo Normal (fila ranqueada por score, métricas em tempo real, motivo IA por cliente)
+4. Após Modo Normal validado: Modo Interativo (dark theme, animações, game layer)
 
 Observações:
-- Código do Lovable lido na íntegra: Settings.tsx, Gestor.tsx, Relatorios.tsx, Goals.tsx
-- Novas telas mapeadas: Configurações, Gestor, Relatórios, Kanban Inativos, Entregador Online
-- Bloco 5 (Entregador Online): token 0c2d25e5e97e051ab56c67dc864e3dd3bf883b7d, clienteId 5066
-- Edge Functions necessárias antes de Settings: invite-user, reset-user-password
-- Tabelas a criar antes de Settings: app_config, monthly_goals (verificar se existem)
-
-Observações:
-- commission_pct em order_items: 100% zerado — irrelevante, comissão usa margem_real
-- Comissão base: faixas por margem_real (0.45→2%, 0.35→1.3%, 0.20→1%, 0.005→0.5%)
-- Regra de aceleração: vendas >= 130% da meta → faixas mais agressivas
-- Bônus categoria: meta batida + margem >= 40% → +0.5% | >= 60% → +1.0%
-- Bloqueio bônus: seller_errors >= 4 no mês → bônus zerado para todas as categorias
-- seller_levels.monthly_sales_target: Joésio e Murilo R$35k, Nayara R$30k
-- xp_log é a tabela padrão — ignorar xp_logs
+- Regra de animações atualizada: framer-motion permitido — sem restrição desde que não sejam infantis
+- "Zero emojis" = zero emojis de WhatsApp/texto — ícones Lucide, símbolos e elementos visuais premium são obrigatórios
+- ui_mode salvo por seller_id: 'normal' | 'interativo'
+- Cliente janela_longa = true nunca aparece na fila de inativos
+- XP de reativação só pago quando pedido aprovado detectado para cliente que estava inactive
+- Tela de inativos tem dois modos: Normal (Clinical Premium) e Interativo (dark, animado, game layer)

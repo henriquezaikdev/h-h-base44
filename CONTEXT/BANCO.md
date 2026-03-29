@@ -53,6 +53,11 @@ Nunca traduzir nomes automaticamente.
 | codigo_ibge | text |
 | created_at | timestamptz |
 | updated_at | timestamptz |
+| reativado_em | timestamptz |
+| janela_longa | boolean default false |
+| intervalo_medio_dias | integer |
+| proxima_compra_estimada | date |
+| reativacao_score | numeric default 0 |
 
 ### buyers
 | Coluna | Tipo |
@@ -80,6 +85,7 @@ Nunca traduzir nomes automaticamente.
 | active | boolean |
 | is_sales_active | boolean |
 | created_at | timestamptz |
+| ui_mode | varchar(20) default 'normal' |
 
 **RLS sellers:** nunca subquery direto na policy — usar get_my_company_id() SECURITY DEFINER.
 
@@ -684,3 +690,19 @@ Os hooks usam as colunas CRM (status_crm, priority_crm, task_date, etc.)
 | bonus_pct | numeric |
 | created_at | timestamptz |
 | UNIQUE | (seller_id, category_key, competencia) |
+
+---
+
+### client_reativacoes
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| client_id | uuid (fk → clients) |
+| seller_id | uuid (fk → sellers) |
+| data_reativacao | timestamptz |
+| valor_primeiro_pedido | numeric |
+| dias_inativo | integer |
+| xp_gerado | integer |
+| streak_dia | integer |
+| multiplicador | numeric default 1.0 |

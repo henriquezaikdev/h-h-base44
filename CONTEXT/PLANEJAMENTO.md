@@ -56,6 +56,8 @@ Antes de construir Settings, Gestor ou Relatórios, verificar/criar:
 ---
 
 ### BLOCO 1 — IDENTIFICAÇÃO DE CLIENTES
+**Status: CONCLUÍDO em 29/03/2026**
+**Observação: KanbanInativosPage será substituída pela Super Tela de Inativos (ver INATIVOS_SUPER_TELA.md)**
 **Prioridade: ALTA | Depende de: clients (existe)**
 
 Objetivo: mostrar visualmente se um cliente é novo, inativo, reativado ou indicação.

@@ -379,3 +379,20 @@ Esse contexto é importante para entender por que certas decisões de arquitetur
   call_attempts_target, whatsapp_response_target, whatsapp_no_response_target, scope
 - scope: 'global' (toda a loja) ou 'individual' (por vendedor)
 - Botão "Replicar" na UI: copia meta para o mês seguinte
+
+## DESIGN SYSTEM — REGRAS ATUALIZADAS (29/03/2026)
+- Animações permitidas: framer-motion liberado — sem restrição desde que não sejam infantis ou pesadas
+- "Zero emojis" significa zero emojis de WhatsApp/texto — ícones Lucide, símbolos e elementos visuais premium são obrigatórios e incentivados
+- 21st.dev MCP deve ser consultado obrigatoriamente antes de qualquer componente novo
+
+## SUPER TELA DE INATIVOS — DECISÕES (29/03/2026)
+- Arquitetura: fila ranqueada por reativacao_score, não Kanban
+- Score = (valor_medio_mensal × 0.4) + (dias_inativo × 0.3) + (total_pedidos_historico × 0.2) + (sazonalidade_bonus × 0.1)
+- Dois modos: Normal (Clinical Premium) e Interativo (dark #0A0A0F, animado, game layer)
+- Preferência de modo salva em sellers.ui_mode por seller_id
+- Cliente janela_longa = true: não entra na fila de inativos, aparece em seção "Silêncio Programado"
+- XP só pago quando pedido aprovado detectado para cliente que estava inactive
+- Streak conta apenas dias úteis
+- Virtualização obrigatória: máximo 50 cards renderizados por vez
+- Edge Functions necessárias: calcular-score-reativacao, classificar-janela-longa, registrar-reativacao
+- Documento completo: INATIVOS_SUPER_TELA.md salvo em CONTEXT/
