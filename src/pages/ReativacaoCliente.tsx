@@ -103,6 +103,11 @@ export default function ReativacaoCliente() {
 
   const [toast, setToast] = useState<{ ok: boolean; msg: string } | null>(null)
 
+  const [showNewTask, setShowNewTask] = useState(false)
+  const [newTaskTitle, setNewTaskTitle] = useState('')
+  const [newTaskDue, setNewTaskDue] = useState('')
+  const [savingNewTask, setSavingNewTask] = useState(false)
+
   // ── Queries ───────────────────────────────────────────────────────────
 
   const { data: cliente, loading: clienteLoading } = useSupabaseQuery<Cliente>(
@@ -138,6 +143,25 @@ export default function ReativacaoCliente() {
   }, [tabDir, clientId, tarefas])
 
   function notify(ok: boolean, msg: string) { setToast({ ok, msg }); setTimeout(() => setToast(null), 4000) }
+
+  async function handleCreateTask() {
+    if (!seller || !clientId || !newTaskTitle.trim()) return
+    setSavingNewTask(true)
+    try {
+      const due = newTaskDue || new Date(Date.now() + 2 * 86_400_000).toISOString().slice(0, 10)
+      const { error } = await supabase.from('tasks').insert({
+        company_id: seller.company_id, title: newTaskTitle.trim(),
+        status: 'open', status_crm: 'pendente', priority: 'high', priority_crm: 'alta',
+        client_id: clientId, assigned_to_seller_id: seller.id, assigned_to: seller.id,
+        created_by_seller_id: seller.id, due_date: due, task_date: due,
+        task_category: 'reativacao', source_module: 'inativos',
+      })
+      if (error) { notify(false, error.message); return }
+      setShowNewTask(false); setNewTaskTitle(''); setNewTaskDue('')
+      setTarefas(null) // force reload
+      notify(true, 'Tarefa criada')
+    } catch (e) { notify(false, String(e)) } finally { setSavingNewTask(false) }
+  }
 
   // ── Actions ───────────────────────────────────────────────────────────
 
@@ -356,6 +380,16 @@ export default function ReativacaoCliente() {
             </div>
           )}
 
+          {/* Criar orçamento */}
+          {!isFinal && (
+            <button
+              onClick={() => nav('/pedidos', { state: { clientId: cliente.id, openNewOrder: true } })}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-[#3B5BDB] border border-[#3B5BDB]/20 rounded-xl hover:bg-[#EEF2FF] transition-colors"
+            >
+              <FileText size={14} /> Criar orçamento para este cliente
+            </button>
+          )}
+
           {/* Ações finais */}
           {!isFinal && (
             <div className="flex items-center gap-3">
@@ -468,6 +502,32 @@ export default function ReativacaoCliente() {
                 </TabsContent>
 
                 <TabsContent value="tarefas" className="mt-0">
+                  {/* Botão criar tarefa */}
+                  <div className="mb-3">
+                    {!showNewTask ? (
+                      <button onClick={() => { setShowNewTask(true); setNewTaskTitle(`Acompanhamento: ${cliente.name}`) }}
+                        className="flex items-center gap-1 text-xs font-medium text-[#3B5BDB] hover:text-[#3451C7] transition-colors">
+                        <Plus size={12} /> Criar tarefa
+                      </button>
+                    ) : (
+                      <div className="border border-[#E5E7EB] rounded-lg p-3 space-y-2.5">
+                        <input value={newTaskTitle} onChange={e => setNewTaskTitle(e.target.value)}
+                          placeholder="Título da tarefa"
+                          className="w-full text-sm border border-[#E5E7EB] rounded-md px-2.5 py-1.5 text-[#111827] placeholder-[#D1D5DB] outline-none focus:border-[#3B5BDB] transition" />
+                        <input type="date" value={newTaskDue} onChange={e => setNewTaskDue(e.target.value)}
+                          className="w-full text-xs border border-[#E5E7EB] rounded-md px-2.5 py-1.5 text-[#6B7280] outline-none focus:border-[#3B5BDB] transition" />
+                        <div className="flex items-center justify-end gap-2">
+                          <button onClick={() => setShowNewTask(false)} className="text-xs text-[#6B7280]">Cancelar</button>
+                          <button onClick={handleCreateTask} disabled={savingNewTask || !newTaskTitle.trim()}
+                            className="px-3 py-1 text-xs font-medium bg-[#3B5BDB] text-white rounded-md hover:bg-[#3451C7] disabled:opacity-50 transition-colors">
+                            {savingNewTask ? '...' : 'Salvar'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Lista tarefas */}
                   {tarefas === null ? <Loader /> : tarefas.length === 0 ? <Empty text="Sem tarefas" /> : (
                     <div className="space-y-1.5">
                       {tarefas.map(t => (
