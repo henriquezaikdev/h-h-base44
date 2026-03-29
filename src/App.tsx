@@ -11,6 +11,7 @@ import DashboardPage from './pages/dashboard/DashboardPage'
 import ClientesPage from './pages/crm/ClientesPage'
 import ClientePage from './pages/crm/ClientePage'
 import ClientesInativos from './pages/ClientesInativos'
+import ReativacaoCliente from './pages/ReativacaoCliente'
 import ProdutosPage from './pages/products/ProdutosPage'
 import PedidosPage from './pages/orders/PedidosPage'
 import PedidoDetalhePage from './pages/orders/PedidoDetalhePage'
@@ -107,7 +108,7 @@ export default function App() {
             <Route path="/dashboard"    element={<DashboardPage />} />
             <Route path="/clientes"          element={<ClientesPage />} />
             <Route path="/clientes/inativos" element={<ClientesInativos />} />
-            <Route path="/clientes/inativos/:clientId" element={<ClientesInativos />} />
+            <Route path="/clientes/inativos/:clientId" element={<ReativacaoCliente />} />
             <Route path="/clientes/:id"      element={<ClientePage />} />
             <Route path="/produtos"     element={<ProdutosPage />} />
             <Route path="/pedidos"      element={<PedidosPage />} />

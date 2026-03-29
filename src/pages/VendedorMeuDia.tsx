@@ -8,6 +8,7 @@ import { EvolutionEmbed } from '@/components/meu-dia/EvolutionEmbed'
 import { supabase } from '@/lib/supabase'
 import { useSupabaseQuery } from '@/hooks/useSupabaseQuery'
 import { Skeleton } from '@/components/ui/skeleton'
+import { CarteiraEmRisco } from '@/components/inativos/CarteiraEmRisco'
 import { Button } from '@/components/ui/button'
 import { Loader2, Search, CheckSquare } from 'lucide-react'
 import { PriorityQueueSection } from '@/components/vendedor/PriorityQueueSection'
@@ -188,6 +189,8 @@ export default function VendedorMeuDia() {
               onSetWhatsappReportModalOpen={() => {}}
               onSetContactFilter={() => {}}
             />
+
+            <CarteiraEmRisco />
 
             <PriorityQueueSection />
 
