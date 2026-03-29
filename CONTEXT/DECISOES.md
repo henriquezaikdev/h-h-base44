@@ -396,3 +396,31 @@ Esse contexto é importante para entender por que certas decisões de arquitetur
 - Virtualização obrigatória: máximo 50 cards renderizados por vez
 - Edge Functions necessárias: calcular-score-reativacao, classificar-janela-longa, registrar-reativacao
 - Documento completo: INATIVOS_SUPER_TELA.md salvo em CONTEXT/
+
+## DECISÕES TÉCNICAS — SESSÃO 29/03/2026
+
+### Inativos e Reativação
+- Clientes com origem = 'filial' NUNCA aparecem na fila de inativos — filtro .neq('origem', 'filial') obrigatório
+- KanbanInativosPage.tsx substituído por ClientesInativos.tsx na rota /clientes/inativos (arquivo antigo pode ser removido)
+- Página de processo: /clientes/inativos/:clientId → ReativacaoCliente.tsx (layout 2 colunas: processo + contexto)
+- Trigger SQL fn_reativar_cliente_por_pedido: pedido/orçamento criado para cliente inactive → reativação automática + XP + tasks encerradas
+- Botões "Criar Orçamento" e "Criar Pedido" na ReativacaoCliente navegam para /pedidos com router state { clientId, openNewOrder/openNewQuote: true }
+- DocModal no PedidosPage aceita prop initialClientId para pré-selecionar cliente
+- Modo Interativo é placeholder funcional — implementação completa pendente validação do Modo Normal
+- CarteiraEmRisco.tsx integrado no VendedorMeuDia (top 3 inativos do seller)
+
+### Enums e Valores
+- enum task_priority usa valores em inglês: low, medium, high, urgent (NÃO português)
+- enum task_status: open, done, cancelled (confirmado)
+- reativacao_status: null | 'em_reativacao' | 'resgatado' | 'perdido'
+
+### Edge Functions
+- Edge Functions dentro do Supabase NUNCA usam fetch direto para supabase.co — sempre usar createClient com Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+- Padrão de import: import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+- Edge Functions deployadas nesta sessão: calcular-score-reativacao, classificar-janela-longa (batch otimizado para evitar WORKER_LIMIT)
+
+### Arquitetura Super Tela
+- Hooks separados: useClientesInativos.ts (queries), useReativacao.ts (ações + XP)
+- 6 componentes em src/components/inativos/: CardInativo, PainelGuerra, BarraMeta, FilaReativacao, SecaoJanelaLonga, ViewModeToggle, CarteiraEmRisco
+- Página orquestradora: src/pages/ClientesInativos.tsx
+- Página processo: src/pages/ReativacaoCliente.tsx

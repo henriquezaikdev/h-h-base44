@@ -55,9 +55,10 @@ Antes de construir Settings, Gestor ou Relatórios, verificar/criar:
 
 ---
 
-### BLOCO 1 — IDENTIFICAÇÃO DE CLIENTES
+### BLOCO 1 — IDENTIFICAÇÃO DE CLIENTES + SUPER TELA DE INATIVOS
 **Status: CONCLUÍDO em 29/03/2026**
-**Observação: KanbanInativosPage será substituída pela Super Tela de Inativos (ver INATIVOS_SUPER_TELA.md)**
+**Super Tela de Inativos: CONCLUÍDA (Modo Normal) — ClientesInativos.tsx + ReativacaoCliente.tsx + CarteiraEmRisco**
+**Pendente: Modo Interativo (dark theme + animações + game layer) — após validação do Normal**
 **Prioridade: ALTA | Depende de: clients (existe)**
 
 Objetivo: mostrar visualmente se um cliente é novo, inativo, reativado ou indicação.
@@ -241,7 +242,7 @@ Referência: Relatorios.tsx do Lovable (lido na íntegra)
 | Semana | Período | Bloco | Entregáveis |
 |---|---|---|---|
 | S1 | 27/03–04/04 | Cockpits + Deploy | ✅ Concluído |
-| S2 | 07/04–11/04 | Bloco 1 | Identificação clientes (badge + kanban inativos) |
+| S2 | 29/03 | Bloco 1 + Super Tela | ✅ Concluído (adiantado — badges, fila, processo, trigger, CarteiraEmRisco) |
 | S3 | 14/04–18/04 | Bloco 2 (parte 1) | Configurações: SQL + Edge Functions + Aba Empresa + Usuários |
 | S4 | 21/04–25/04 | Bloco 2 (parte 2) | Configurações: Metas + Fiscal + Equivalências |
 | S5 | 28/04–02/05 | Bloco 3 | Tela do Gestor completa |

@@ -160,24 +160,32 @@ Módulos pendentes:
 Data: 29/03/2026
 
 Último concluído:
-- Bloco 1 completo: OriginPickerModal (6 origens: prospeccao, google, indicacao, filial, porta_loja, outro), badges na listagem, campo origem na ficha, KanbanInativosPage criado (rota /clientes/inativos)
-- Commit 455226f deployado no Vercel (produção)
-- SQLs Bloco Inativos executados: colunas janela_longa, intervalo_medio_dias, proxima_compra_estimada, reativacao_score em clients; ui_mode em sellers
+- Bloco 1 completo: OriginPickerModal (6 origens), badges na listagem, campo origem na ficha
+- Super Tela de Inativos completa (Modo Normal):
+  - ClientesInativos.tsx: fila ranqueada por reativacao_score, 4 métricas, barra de meta, silêncio programado
+  - ReativacaoCliente.tsx: página de processo (stepper, contatos, confirmar/perder, painel contexto)
+  - CarteiraEmRisco.tsx: bloco no VendedorMeuDia (top 3 inativos)
+  - Hooks: useClientesInativos.ts, useReativacao.ts
+  - 6 componentes em src/components/inativos/
+- Edge Functions deployadas: calcular-score-reativacao, classificar-janela-longa
+- SQLs executados: 9 colunas novas em clients (reativacao_*), tabelas client_reativacoes e reativacao_contatos, trigger fn_reativar_cliente_por_pedido
+- Trigger automático: pedido/orçamento criado para cliente inactive → reativação automática + XP
+- Botões Orçamento/Pedido na ReativacaoCliente abrem DocModal com cliente pré-selecionado
+- Commits deployados: 455226f → cdc8f70 (Vercel produção)
 
 Em andamento:
-- Super Tela de Inativos (reconstrução completa — KanbanInativosPage atual não carrega dados)
-- SQL 3 pendente: CREATE TABLE client_reativacoes
+- Modo Interativo da tela de inativos (placeholder funcional — dark theme + animações pendente validação Normal)
 
 Próximo passo:
-1. Novo chat — rodar SQL 3 (client_reativacoes)
-2. Deploy Edge Functions: calcular-score-reativacao, classificar-janela-longa
-3. Reconstruir KanbanInativosPage.tsx — Modo Normal (fila ranqueada por score, métricas em tempo real, motivo IA por cliente)
-4. Após Modo Normal validado: Modo Interativo (dark theme, animações, game layer)
+1. Bloco 2 — Configurações (/configuracoes)
+   - Criar tabela app_config
+   - Deploy Edge Functions: invite-user, reset-user-password
+   - 5 abas: Empresa, Usuários, Metas, Fiscal, Equivalências
 
 Observações:
-- Regra de animações atualizada: framer-motion permitido — sem restrição desde que não sejam infantis
-- "Zero emojis" = zero emojis de WhatsApp/texto — ícones Lucide, símbolos e elementos visuais premium são obrigatórios
+- framer-motion permitido — sem restrição desde que não sejam infantis
+- "Zero emojis" = zero emojis de WhatsApp/texto — ícones Lucide e elementos visuais premium são obrigatórios
 - ui_mode salvo por seller_id: 'normal' | 'interativo'
 - Cliente janela_longa = true nunca aparece na fila de inativos
-- XP de reativação só pago quando pedido aprovado detectado para cliente que estava inactive
-- Tela de inativos tem dois modos: Normal (Clinical Premium) e Interativo (dark, animado, game layer)
+- Cliente origem = 'filial' nunca aparece na fila de inativos
+- KanbanInativosPage.tsx substituído por ClientesInativos.tsx (arquivo antigo pode ser removido)
