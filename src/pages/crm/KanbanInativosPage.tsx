@@ -212,7 +212,7 @@ export default function KanbanInativosPage() {
         title: `Reativacao: ${client.name}`,
         status: 'open',
         status_crm: 'pendente',
-        priority: 'alta',
+        priority: 'high',
         priority_crm: 'alta',
         client_id: client.id,
         assigned_to_seller_id: seller.id,
