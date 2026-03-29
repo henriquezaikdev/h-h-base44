@@ -1,129 +1,156 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  ChevronLeft, Phone, MessageCircle, UserCheck, MessageSquare, X,
+  ChevronLeft, ChevronDown, ChevronUp, Phone, MessageCircle,
+  Target, Zap, TrendingUp, DollarSign, Clock, AlertTriangle,
+  Plus, Calendar,
 } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useSupabaseQuery } from '../../hooks/useSupabaseQuery'
+import { Progress } from '../../components/ui/progress'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface InactiveClient {
   id: string
   name: string
+  cnpj: string | null
   phone: string | null
-  status: string
   seller_id: string | null
   origem: string | null
   last_order_at: string | null
+  total_orders: number | null
+  total_revenue: number | null
+  reativacao_score: number | null
   created_at: string
   sellers: { name: string } | null
 }
 
-interface RecentTask {
-  client_id: string
+interface JanelaLongaClient {
+  id: string
+  name: string
+  cnpj: string | null
+  intervalo_medio_dias: number | null
+  proxima_compra_estimada: string | null
+  sellers: { name: string } | null
 }
 
-interface RecentQuote {
-  client_id: string
+interface RecentOrder {
+  id: string
+  total: number
+  created_at: string
+  order_items: { products: { name: string } | null }[]
 }
 
-type KanbanColumn = 'sem_contato' | 'contatado' | 'proposta' | 'reativado'
+interface Reativacao {
+  id: string
+  data_reativacao: string
+  valor_primeiro_pedido: number | null
+}
 
-interface KanbanCard extends InactiveClient {
-  column: KanbanColumn
-  daysSinceOrder: number | null
+type ReativacaoStatus = 'nao_iniciado' | 'em_contato' | 'negociando' | 'perdido'
+
+interface QueryResult {
+  inactiveClients: InactiveClient[]
+  janelaLongaClients: JanelaLongaClient[]
+  reativacoesMes: Reativacao[]
+  atRiskCount: number
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function daysSince(d: string | null): number | null {
   if (!d) return null
-  return Math.floor((Date.now() - new Date(d).getTime()) / 86_400_000)
+  return Math.floor((Date.now() - new Date(String(d).replace(' ', 'T')).getTime()) / 86_400_000)
 }
 
-const ORIGEM_LABELS: Record<string, string> = {
-  ligacao: 'Prospecção',
-  google: 'Google',
-  indicacao: 'Indicação',
-  filial: 'Filial',
-  porta_loja: 'Porta a porta',
-  conta_azul: 'Conta Azul',
-  conquistado: 'Conquistado',
+function fmtCurrency(v: number): string {
+  return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
 }
 
-const COLUMN_CFG: { key: KanbanColumn; label: string; color: string; dotColor: string }[] = [
-  { key: 'sem_contato', label: 'Sem contato',      color: 'text-red-600',     dotColor: 'bg-red-500' },
-  { key: 'contatado',   label: 'Contatado',         color: 'text-amber-600',   dotColor: 'bg-amber-500' },
-  { key: 'proposta',    label: 'Proposta enviada',   color: 'text-[#3B5BDB]',  dotColor: 'bg-[#3B5BDB]' },
-  { key: 'reativado',   label: 'Reativado',          color: 'text-emerald-600', dotColor: 'bg-emerald-500' },
-]
+function fmtCNPJ(v: string | null): string {
+  if (!v) return ''
+  const d = v.replace(/\D/g, '')
+  if (d.length !== 14) return v
+  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`
+}
+
+function fmtDate(d: string | null): string {
+  if (!d) return '—'
+  return new Date(String(d).replace(' ', 'T')).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+}
+
+const META_MENSAL = 10
+
+const STATUS_CFG: Record<ReativacaoStatus, { label: string; bg: string; text: string }> = {
+  nao_iniciado: { label: 'Nao iniciado', bg: 'bg-gray-100', text: 'text-gray-500' },
+  em_contato:   { label: 'Em contato',   bg: 'bg-amber-50', text: 'text-amber-700' },
+  negociando:   { label: 'Negociando',   bg: 'bg-[#EEF2FF]', text: 'text-[#3B5BDB]' },
+  perdido:      { label: 'Perdido',      bg: 'bg-red-50', text: 'text-red-600' },
+}
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
-
-interface KanbanQueryResult {
-  clients: InactiveClient[]
-  recentTasks: RecentTask[]
-  recentQuotes: RecentQuote[]
-  reactivatedClients: { id: string }[]
-}
 
 export default function KanbanInativosPage() {
   const navigate = useNavigate()
   const { seller } = useAuth()
 
-  const [contactModalClient, setContactModalClient] = useState<KanbanCard | null>(null)
-  const [contactNote, setContactNote]     = useState('')
-  const [savingContact, setSavingContact] = useState(false)
-  const [savingReactivate, setSavingReactivate] = useState<string | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [statusMap, setStatusMap] = useState<Record<string, ReativacaoStatus>>({})
+  const [silencioProgramadoOpen, setSilencioProgramadoOpen] = useState(true)
+  const [creatingTask, setCreatingTask] = useState<string | null>(null)
+  const [expandedOrders, setExpandedOrders] = useState<Record<string, RecentOrder[]>>({})
 
-  // ── Queries ──────────────────────────────────────────────────────────────
+  // ── Main query ──────────────────────────────────────────────────────────
 
-  const { data, loading, refetch } = useSupabaseQuery<KanbanQueryResult>(
+  const { data, loading, refetch } = useSupabaseQuery<QueryResult>(
     async ({ company_id }) => {
-      const thirtyDaysAgo = new Date(Date.now() - 30 * 86_400_000).toISOString()
+      const now = new Date()
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
 
-      const [clientsRes, tasksRes, quotesRes, reactivatedRes] = await Promise.all([
-        // Inactive clients (excluding filial)
+      const [inactiveRes, janelaRes, reativacoesRes, atRiskRes] = await Promise.all([
+        // Inactive clients (not janela_longa), ordered by score DESC
         supabase
           .from('clients')
-          .select('id, name, phone, status, seller_id, origem, last_order_at, created_at, sellers(name)')
+          .select('id, name, cnpj, phone, seller_id, origem, last_order_at, total_orders, total_revenue, reativacao_score, created_at, sellers(name)')
           .eq('company_id', company_id)
           .eq('status', 'inactive')
-          .neq('origem', 'filial')
-          .order('last_order_at', { ascending: true, nullsFirst: true }),
-        // Recent tasks linked to clients (last 30 days)
-        supabase
-          .from('tasks')
-          .select('client_id')
-          .eq('company_id', company_id)
-          .gte('created_at', thirtyDaysAgo)
-          .not('client_id', 'is', null),
-        // Recent quotes pending (last 30 days)
-        supabase
-          .from('quotes')
-          .select('client_id')
-          .eq('company_id', company_id)
-          .eq('status', 'pending')
-          .gte('created_at', thirtyDaysAgo),
-        // Recently reactivated clients
+          .eq('janela_longa', false)
+          .order('reativacao_score', { ascending: false, nullsFirst: false })
+          .limit(50),
+
+        // Janela longa clients
         supabase
           .from('clients')
-          .select('id')
+          .select('id, name, cnpj, intervalo_medio_dias, proxima_compra_estimada, sellers(name)')
           .eq('company_id', company_id)
-          .eq('status', 'active')
-          .not('reativado_em' as string, 'is', null),
+          .eq('janela_longa', true),
+
+        // Reativacoes this month
+        supabase
+          .from('client_reativacoes')
+          .select('id, data_reativacao, valor_primeiro_pedido')
+          .eq('company_id', company_id)
+          .gte('data_reativacao', monthStart),
+
+        // At risk count
+        supabase
+          .from('clients')
+          .select('id', { count: 'exact', head: true })
+          .eq('company_id', company_id)
+          .eq('status', 'at_risk'),
       ])
 
-      if (clientsRes.error) return { data: null, error: clientsRes.error }
+      if (inactiveRes.error) return { data: null, error: inactiveRes.error }
 
       return {
         data: {
-          clients:            (clientsRes.data ?? []) as unknown as InactiveClient[],
-          recentTasks:        (tasksRes.data ?? []) as unknown as RecentTask[],
-          recentQuotes:       (quotesRes.data ?? []) as unknown as RecentQuote[],
-          reactivatedClients: (reactivatedRes.data ?? []) as unknown as { id: string }[],
+          inactiveClients: (inactiveRes.data ?? []) as unknown as InactiveClient[],
+          janelaLongaClients: (janelaRes.data ?? []) as unknown as JanelaLongaClient[],
+          reativacoesMes: (reativacoesRes.data ?? []) as unknown as Reativacao[],
+          atRiskCount: atRiskRes.count ?? 0,
         },
         error: null,
       }
@@ -131,100 +158,85 @@ export default function KanbanInativosPage() {
     [],
   )
 
-  // ── Classify into columns ────────────────────────────────────────────────
+  // Polling 30s
+  useEffect(() => {
+    const interval = setInterval(() => { refetch() }, 30_000)
+    return () => clearInterval(interval)
+  }, [refetch])
 
-  const cards = useMemo(() => {
-    if (!data) return []
+  // ── Derived ──────────────────────────────────────────────────────────────
 
-    const taskClientIds   = new Set((data.recentTasks ?? []).map(t => t.client_id))
-    const quoteClientIds  = new Set((data.recentQuotes ?? []).map(q => q.client_id))
+  const inactiveClients = data?.inactiveClients ?? []
+  const janelaLongaClients = data?.janelaLongaClients ?? []
+  const reativacoesMes = data?.reativacoesMes ?? []
+  const atRiskCount = data?.atRiskCount ?? 0
 
-    const result: KanbanCard[] = []
+  const resgatadosMes = reativacoesMes.length
+  const receitaRecuperada = reativacoesMes.reduce((s, r) => s + (r.valor_primeiro_pedido ?? 0), 0)
+  const progressPct = Math.min(100, (resgatadosMes / META_MENSAL) * 100)
+  const mesNome = new Date().toLocaleDateString('pt-BR', { month: 'long' })
 
-    // Add inactive clients
-    for (const c of data.clients) {
-      let column: KanbanColumn = 'sem_contato'
+  // ── Fetch orders for expanded card ──────────────────────────────────────
 
-      if (quoteClientIds.has(c.id)) {
-        column = 'proposta'
-      } else if (taskClientIds.has(c.id)) {
-        column = 'contatado'
-      }
+  const fetchOrders = useCallback(async (clientId: string) => {
+    if (expandedOrders[clientId]) return
+    const { data: orders } = await supabase
+      .from('orders')
+      .select('id, total, created_at, order_items(products(name))')
+      .eq('client_id', clientId)
+      .in('status', ['approved', 'invoiced'])
+      .order('created_at', { ascending: false })
+      .limit(3)
+    setExpandedOrders(prev => ({ ...prev, [clientId]: (orders ?? []) as unknown as RecentOrder[] }))
+  }, [expandedOrders])
 
-      result.push({
-        ...c,
-        column,
-        daysSinceOrder: daysSince(c.last_order_at),
-      })
-    }
-
-    // Mark any client that was reactivated into the "reativado" column
-    const reactivatedIds = new Set((data.reactivatedClients ?? []).map(r => r.id))
-    for (const card of result) {
-      if (reactivatedIds.has(card.id)) card.column = 'reativado'
-    }
-
-    return result
-  }, [data])
-
-  const columns = useMemo(() => {
-    const grouped: Record<KanbanColumn, KanbanCard[]> = {
-      sem_contato: [],
-      contatado: [],
-      proposta: [],
-      reativado: [],
-    }
-    for (const card of cards) {
-      grouped[card.column].push(card)
-    }
-    return grouped
-  }, [cards])
-
-  // ── Actions ──────────────────────────────────────────────────────────────
-
-  async function handleRegisterContact() {
-    if (!contactModalClient || !seller) return
-    setSavingContact(true)
-    try {
-      await supabase.from('tasks').insert({
-        title:                  `Contato com ${contactModalClient.name}`,
-        status:                 'open',
-        status_crm:             'pendente',
-        priority_crm:           'media',
-        client_id:              contactModalClient.id,
-        assigned_to_seller_id:  contactModalClient.seller_id ?? seller.id,
-        assigned_to:            contactModalClient.seller_id ?? seller.id,
-        created_by_seller_id:   seller.id,
-        company_id:             seller.company_id,
-        description:            contactNote || null,
-        task_date:              new Date().toISOString().slice(0, 10),
-      })
-      setContactModalClient(null)
-      setContactNote('')
-      refetch()
-    } finally {
-      setSavingContact(false)
+  function handleExpand(clientId: string) {
+    if (expandedId === clientId) {
+      setExpandedId(null)
+    } else {
+      setExpandedId(clientId)
+      fetchOrders(clientId)
     }
   }
 
-  async function handleReactivate(card: KanbanCard) {
+  // ── Create reactivation task ────────────────────────────────────────────
+
+  async function handleIniciarReativacao(client: InactiveClient) {
     if (!seller) return
-    setSavingReactivate(card.id)
+    setCreatingTask(client.id)
     try {
-      await supabase
-        .from('clients')
-        .update({
-          status: 'active',
-          reativado_em: new Date().toISOString(),
-        } as Record<string, unknown>)
-        .eq('id', card.id)
+      const dueDate = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10)
+      await supabase.from('tasks').insert({
+        title: `Reativacao: ${client.name}`,
+        status: 'open',
+        status_crm: 'pendente',
+        priority_crm: 'alta',
+        client_id: client.id,
+        assigned_to_seller_id: seller.id,
+        assigned_to: seller.id,
+        created_by_seller_id: seller.id,
+        company_id: seller.company_id,
+        due_date: dueDate,
+        task_date: dueDate,
+        task_category: 'reativacao',
+      })
+      setStatusMap(prev => ({ ...prev, [client.id]: 'em_contato' }))
       refetch()
     } finally {
-      setSavingReactivate(null)
+      setCreatingTask(null)
     }
   }
 
-  // ── Render ───────────────────────────────────────────────────────────────
+  // ── Metrics cards ───────────────────────────────────────────────────────
+
+  const metrics = useMemo(() => [
+    { label: 'Total de Inativos', value: String(inactiveClients.length), icon: Target, iconBg: 'bg-red-50', iconCls: 'text-red-500' },
+    { label: 'Em Reativacao', value: String(atRiskCount), icon: Zap, iconBg: 'bg-amber-50', iconCls: 'text-amber-500' },
+    { label: 'Resgatados no Mes', value: String(resgatadosMes), icon: TrendingUp, iconBg: 'bg-emerald-50', iconCls: 'text-emerald-600' },
+    { label: 'Receita Recuperada', value: fmtCurrency(receitaRecuperada), icon: DollarSign, iconBg: 'bg-[#EEF2FF]', iconCls: 'text-[#3B5BDB]' },
+  ], [inactiveClients.length, atRiskCount, resgatadosMes, receitaRecuperada])
+
+  // ── Render ──────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-[#FAFAF9]">
@@ -237,211 +249,278 @@ export default function KanbanInativosPage() {
         >
           <ChevronLeft size={14} /> Carteira de Clientes
         </button>
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-semibold text-[#111827]">Clientes Inativos</h1>
-            <p className="text-sm text-[#6B7280] mt-0.5">
-              {loading ? 'Carregando...' : `${cards.length} cliente${cards.length !== 1 ? 's' : ''} inativo${cards.length !== 1 ? 's' : ''}`}
-            </p>
-          </div>
+        <div>
+          <h1 className="text-lg font-semibold text-[#111827]">Clientes Inativos</h1>
+          <p className="text-sm text-[#6B7280] mt-0.5">
+            {loading ? 'Carregando...' : `Fila de batalha comercial — ${inactiveClients.length} clientes ranqueados por score`}
+          </p>
         </div>
       </div>
 
-      {/* Kanban */}
-      <div className="px-6 py-5">
+      <div className="px-6 py-5 space-y-5">
+
+        {/* [A] Painel de Guerra — Metricas */}
+        <div className="grid grid-cols-4 gap-3">
+          {metrics.map(({ label, value, icon: Icon, iconBg, iconCls }) => (
+            <div key={label} className="bg-white border border-[#E5E7EB] rounded-xl p-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs text-[#6B7280] mb-1">{label}</p>
+                  <p className="text-xl font-semibold text-[#111827] tabular-nums leading-tight">{loading ? '—' : value}</p>
+                </div>
+                <div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center shrink-0`}>
+                  <Icon size={15} className={iconCls} />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* [B] Barra de Progresso da Meta */}
+        <div className="bg-white border border-[#E5E7EB] rounded-xl p-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium text-[#111827]">
+              {resgatadosMes} / {META_MENSAL} clientes reativados em {mesNome}
+            </p>
+            <span className="text-xs text-[#6B7280] tabular-nums">{Math.round(progressPct)}%</span>
+          </div>
+          <Progress value={progressPct} className="h-2" />
+          {resgatadosMes < META_MENSAL && (
+            <p className="text-xs text-[#9CA3AF] mt-2">
+              Faltam {META_MENSAL - resgatadosMes} clientes para bater a meta
+            </p>
+          )}
+          {resgatadosMes >= META_MENSAL && (
+            <p className="text-xs text-emerald-600 mt-2 font-medium">Meta atingida!</p>
+          )}
+        </div>
+
+        {/* [C] Fila de Batalha */}
         {loading ? (
           <div className="bg-white border border-[#E5E7EB] rounded-xl p-16 flex items-center justify-center">
-            <span className="text-sm text-[#9CA3AF]">Carregando clientes inativos...</span>
+            <span className="text-sm text-[#9CA3AF]">Carregando fila de batalha...</span>
+          </div>
+        ) : inactiveClients.length === 0 ? (
+          <div className="bg-white border border-[#E5E7EB] rounded-xl p-16 text-center">
+            <Target size={32} className="text-[#D1D5DB] mx-auto mb-3" />
+            <p className="text-sm text-[#6B7280]">Nenhum cliente inativo na fila</p>
+            <p className="text-xs text-[#9CA3AF] mt-1">Execute as Edge Functions para calcular scores</p>
           </div>
         ) : (
-          <div className="flex gap-4 overflow-x-auto pb-4">
-            {COLUMN_CFG.map(({ key, label, color, dotColor }) => {
-              const colCards = columns[key]
+          <div className="space-y-2">
+            {inactiveClients.map((client, index) => {
+              const isExpanded = expandedId === client.id
+              const dias = daysSince(client.last_order_at)
+              const valorMensal = (client.total_revenue ?? 0) / Math.max(1, Math.ceil(((daysSince(client.created_at) ?? 365)) / 30))
+              const status = statusMap[client.id] ?? 'nao_iniciado'
+              const statusCfg = STATUS_CFG[status]
+              const orders = expandedOrders[client.id]
+
               return (
-                <div key={key} className="min-w-[300px] w-[300px] shrink-0">
-                  {/* Column header */}
-                  <div className="flex items-center gap-2 mb-3 px-1">
-                    <span className={`w-2 h-2 rounded-full ${dotColor}`} />
-                    <span className={`text-sm font-semibold ${color}`}>{label}</span>
-                    <span className="text-xs text-[#9CA3AF] ml-auto tabular-nums">{colCards.length}</span>
-                  </div>
+                <motion.div
+                  key={client.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.03 }}
+                >
+                  <div
+                    className={`bg-white border rounded-xl transition-all ${
+                      isExpanded ? 'border-[#3B5BDB]/30 shadow-[0_1px_6px_0_rgb(59,91,219,0.08)]' : 'border-[#E5E7EB] hover:border-[#C7D2FE]'
+                    }`}
+                  >
+                    {/* Card principal */}
+                    <div
+                      className="px-4 py-3 flex items-center gap-4 cursor-pointer"
+                      onClick={() => handleExpand(client.id)}
+                    >
+                      {/* Rank */}
+                      <span className="w-7 h-7 rounded-lg bg-[#F3F4F6] text-[10px] font-bold text-[#6B7280] flex items-center justify-center shrink-0">
+                        {index + 1}
+                      </span>
 
-                  {/* Cards */}
-                  <div className="space-y-2">
-                    {colCards.length === 0 ? (
-                      <div className="bg-white border border-dashed border-[#E5E7EB] rounded-xl p-6 text-center">
-                        <p className="text-xs text-[#9CA3AF]">Nenhum cliente</p>
-                      </div>
-                    ) : (
-                      colCards.map(card => (
-                        <div
-                          key={card.id}
-                          className="bg-white border border-[#E5E7EB] rounded-xl p-3 hover:shadow-[0_1px_4px_0_rgb(0,0,0,0.06)] transition-shadow"
-                        >
-                          {/* Client name + navigate */}
+                      {/* Info principal */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
                           <button
-                            onClick={() => navigate(`/clientes/${card.id}`)}
-                            className="text-sm font-medium text-[#111827] hover:text-[#3B5BDB] text-left transition-colors leading-tight"
+                            onClick={e => { e.stopPropagation(); navigate(`/clientes/${client.id}`) }}
+                            className="text-sm font-medium text-[#111827] hover:text-[#3B5BDB] truncate transition-colors"
                           >
-                            {card.name}
+                            {client.name}
                           </button>
-
-                          {/* Meta info */}
-                          <div className="mt-1.5 flex items-center gap-2 flex-wrap">
-                            {card.daysSinceOrder !== null ? (
-                              <span className="text-[10px] text-[#9CA3AF]">
-                                {card.daysSinceOrder} dias sem pedido
-                              </span>
-                            ) : (
-                              <span className="text-[10px] text-[#9CA3AF]">Sem pedidos</span>
-                            )}
-                            {card.sellers?.name && (
-                              <span className="text-[10px] text-[#6B7280]">
-                                · {card.sellers.name}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Origin badge */}
-                          {card.origem && card.origem !== 'filial' && (
-                            <span className="inline-flex mt-1.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600">
-                              {ORIGEM_LABELS[card.origem] ?? card.origem}
-                            </span>
-                          )}
-
-                          {/* Actions */}
-                          {key !== 'reativado' && (
-                            <div className="mt-2.5 pt-2 border-t border-[#F3F4F6] flex items-center gap-1.5">
-                              {card.phone && (
-                                <>
-                                  <a
-                                    href={`tel:${card.phone}`}
-                                    title="Ligar"
-                                    className="p-1.5 rounded-md text-[#9CA3AF] hover:text-[#374151] hover:bg-[#F3F4F6] transition-colors"
-                                  >
-                                    <Phone size={13} />
-                                  </a>
-                                  <a
-                                    href={`https://wa.me/55${card.phone.replace(/\D/g, '')}`}
-                                    target="_blank" rel="noreferrer" title="WhatsApp"
-                                    className="p-1.5 rounded-md text-[#9CA3AF] hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
-                                  >
-                                    <MessageCircle size={13} />
-                                  </a>
-                                </>
-                              )}
-                              <button
-                                onClick={() => { setContactModalClient(card); setContactNote('') }}
-                                title="Registrar contato"
-                                className="flex items-center gap-1 ml-auto px-2 py-1 text-[10px] font-medium text-[#6B7280] border border-[#E5E7EB] rounded-md hover:bg-[#F9FAFB] transition-colors"
-                              >
-                                <MessageSquare size={11} /> Contato
-                              </button>
-                              <button
-                                onClick={() => handleReactivate(card)}
-                                disabled={savingReactivate === card.id}
-                                title="Reativar cliente"
-                                className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium text-emerald-700 border border-emerald-200 rounded-md hover:bg-emerald-50 disabled:opacity-50 transition-colors"
-                              >
-                                <UserCheck size={11} />
-                                {savingReactivate === card.id ? '...' : 'Reativar'}
-                              </button>
-                            </div>
-                          )}
-
-                          {key === 'reativado' && (
-                            <div className="mt-2.5 pt-2 border-t border-[#F3F4F6]">
-                              <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700">
-                                Cliente reativado
-                              </span>
-                            </div>
+                          {client.cnpj && (
+                            <span className="text-[10px] text-[#9CA3AF] font-mono shrink-0">{fmtCNPJ(client.cnpj)}</span>
                           )}
                         </div>
-                      ))
-                    )}
+                        <div className="flex items-center gap-3 mt-0.5">
+                          <span className="text-xs text-[#6B7280]">Valia {fmtCurrency(valorMensal)}/mes</span>
+                          <span className="text-xs text-[#9CA3AF]">{client.sellers?.name ?? '—'}</span>
+                        </div>
+                      </div>
+
+                      {/* Dias inativo */}
+                      <div className="text-right shrink-0">
+                        <div className="flex items-center gap-1 justify-end">
+                          <Clock size={12} className={dias !== null && dias > 120 ? 'text-red-400' : 'text-amber-400'} />
+                          <span className={`text-xs font-medium tabular-nums ${dias !== null && dias > 120 ? 'text-red-600' : 'text-amber-600'}`}>
+                            {dias !== null ? `${dias}d` : '—'}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-[#9CA3AF] mt-0.5">sem comprar</p>
+                      </div>
+
+                      {/* Score badge */}
+                      <span className="inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-semibold bg-[#EEF2FF] text-[#3B5BDB] tabular-nums shrink-0">
+                        {Math.round(client.reativacao_score ?? 0)}
+                      </span>
+
+                      {/* Status */}
+                      <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium shrink-0 ${statusCfg.bg} ${statusCfg.text}`}>
+                        {statusCfg.label}
+                      </span>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+                        {client.phone && (
+                          <>
+                            <a href={`tel:${client.phone}`} title="Ligar"
+                               className="p-1.5 rounded-md text-[#9CA3AF] hover:text-[#374151] hover:bg-[#F3F4F6] transition-colors">
+                              <Phone size={13} />
+                            </a>
+                            <a href={`https://wa.me/55${client.phone.replace(/\D/g, '')}`}
+                               target="_blank" rel="noreferrer" title="WhatsApp"
+                               className="p-1.5 rounded-md text-[#9CA3AF] hover:text-emerald-600 hover:bg-emerald-50 transition-colors">
+                              <MessageCircle size={13} />
+                            </a>
+                          </>
+                        )}
+                        {status === 'nao_iniciado' && (
+                          <button
+                            onClick={() => handleIniciarReativacao(client)}
+                            disabled={creatingTask === client.id}
+                            className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium bg-[#3B5BDB] text-white rounded-md hover:bg-[#3451C7] disabled:opacity-50 transition-colors"
+                          >
+                            <Plus size={11} />
+                            {creatingTask === client.id ? '...' : 'Iniciar'}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Expand indicator */}
+                      {isExpanded ? <ChevronUp size={14} className="text-[#9CA3AF]" /> : <ChevronDown size={14} className="text-[#9CA3AF]" />}
+                    </div>
+
+                    {/* Expanded preview */}
+                    <AnimatePresence>
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="px-4 pb-3 pt-1 border-t border-[#F3F4F6]">
+                            <p className="text-xs font-medium text-[#6B7280] mb-2">Ultimos pedidos</p>
+                            {!orders ? (
+                              <p className="text-xs text-[#9CA3AF]">Carregando...</p>
+                            ) : orders.length === 0 ? (
+                              <p className="text-xs text-[#9CA3AF]">Nenhum pedido encontrado</p>
+                            ) : (
+                              <div className="space-y-1.5">
+                                {orders.map(o => {
+                                  const productName = o.order_items?.[0]?.products?.name ?? '—'
+                                  return (
+                                    <div key={o.id} className="flex items-center justify-between text-xs">
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <span className="text-[#9CA3AF] whitespace-nowrap">{fmtDate(o.created_at)}</span>
+                                        <span className="text-[#374151] truncate">{productName}</span>
+                                      </div>
+                                      <span className="font-medium text-[#111827] tabular-nums shrink-0 ml-3">{fmtCurrency(o.total)}</span>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            )}
+                            <div className="mt-2 flex items-center gap-2">
+                              <span className="text-[10px] text-[#9CA3AF]">
+                                Historico: {client.total_orders ?? 0} pedidos · {fmtCurrency(client.total_revenue ?? 0)} total
+                              </span>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
-                </div>
+                </motion.div>
               )
             })}
           </div>
         )}
-      </div>
 
-      {/* ── Contact Modal ──────────────────────────────────────────────── */}
-      {contactModalClient && (
-        <ContactModal
-          client={contactModalClient}
-          contactNote={contactNote}
-          setContactNote={setContactNote}
-          savingContact={savingContact}
-          onClose={() => setContactModalClient(null)}
-          onSave={handleRegisterContact}
-        />
-      )}
-    </div>
-  )
-}
-
-// ─── Contact Modal (extracted for Escape handler) ─────────────────────────────
-
-function ContactModal({ client, contactNote, setContactNote, savingContact, onClose, onSave }: {
-  client: KanbanCard
-  contactNote: string
-  setContactNote: (v: string) => void
-  savingContact: boolean
-  onClose: () => void
-  onSave: () => void
-}) {
-  useEffect(() => {
-    function handleKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', handleKey)
-    return () => window.removeEventListener('keydown', handleKey)
-  }, [onClose])
-
-  return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={onClose}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB]">
-              <div>
-                <h2 className="text-base font-semibold text-[#111827]">Registrar Contato</h2>
-                <p className="text-sm text-[#6B7280] mt-0.5">{client.name}</p>
+        {/* [D] Silencio Programado */}
+        {janelaLongaClients.length > 0 && (
+          <div className="bg-white border border-[#E5E7EB] rounded-xl overflow-hidden">
+            <button
+              onClick={() => setSilencioProgramadoOpen(p => !p)}
+              className="w-full px-4 py-3 flex items-center justify-between hover:bg-[#F9FAFB] transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Calendar size={14} className="text-[#6B7280]" />
+                <span className="text-sm font-medium text-[#111827]">Clientes em Silencio Programado</span>
+                <span className="text-xs text-[#9CA3AF] tabular-nums">{janelaLongaClients.length}</span>
               </div>
-              <button
-                onClick={onClose}
-                aria-label="Fechar"
-                className="p-2 rounded-lg text-[#9CA3AF] hover:text-[#374151] hover:bg-[#F3F4F6] transition-colors"
-              >
-                <X size={16} />
-              </button>
-            </div>
+              {silencioProgramadoOpen ? <ChevronUp size={14} className="text-[#9CA3AF]" /> : <ChevronDown size={14} className="text-[#9CA3AF]" />}
+            </button>
 
-            <div className="px-6 py-5">
-              <label className="block text-xs font-medium text-[#6B7280] mb-1">Observação (opcional)</label>
-              <textarea
-                value={contactNote}
-                onChange={e => setContactNote(e.target.value)}
-                rows={3}
-                placeholder="Ex: Ligou para verificar interesse em recompra..."
-                className="w-full text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 text-[#111827] placeholder-[#9CA3AF] outline-none focus:border-[#3B5BDB] focus:ring-2 focus:ring-[#3B5BDB]/20 transition resize-none"
-              />
-            </div>
-
-            <div className="px-6 py-4 border-t border-[#E5E7EB] flex items-center justify-end gap-2">
-              <button
-                onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-[#374151] border border-[#E5E7EB] rounded-lg hover:bg-[#F9FAFB] transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={onSave}
-                disabled={savingContact}
-                className="px-4 py-2 text-sm font-medium bg-[#3B5BDB] text-white rounded-lg hover:bg-[#3451C7] disabled:opacity-60 transition-colors"
-              >
-                {savingContact ? 'Salvando...' : 'Registrar Contato'}
-              </button>
-            </div>
+            <AnimatePresence>
+              {silencioProgramadoOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="border-t border-[#F3F4F6] divide-y divide-[#F3F4F6]">
+                    {janelaLongaClients.map(client => {
+                      const estimada = client.proxima_compra_estimada
+                      const isJanelaAberta = estimada ? new Date(estimada) < new Date() : false
+                      return (
+                        <div key={client.id} className="px-4 py-2.5 flex items-center justify-between">
+                          <div className="min-w-0">
+                            <button
+                              onClick={() => navigate(`/clientes/${client.id}`)}
+                              className="text-sm font-medium text-[#111827] hover:text-[#3B5BDB] transition-colors truncate"
+                            >
+                              {client.name}
+                            </button>
+                            <div className="flex items-center gap-3 mt-0.5">
+                              {client.cnpj && <span className="text-[10px] text-[#9CA3AF] font-mono">{fmtCNPJ(client.cnpj)}</span>}
+                              <span className="text-xs text-[#6B7280]">{client.sellers?.name ?? '—'}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3 shrink-0">
+                            <div className="text-right">
+                              <p className="text-xs text-[#6B7280]">Intervalo medio: <span className="font-medium tabular-nums">{client.intervalo_medio_dias ?? '—'}d</span></p>
+                              <p className="text-xs text-[#9CA3AF]">Proxima: {estimada ? fmtDate(estimada) : '—'}</p>
+                            </div>
+                            {isJanelaAberta && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700">
+                                <AlertTriangle size={10} /> Janela Aberta
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-        </div>
+        )}
+
+      </div>
+    </div>
   )
 }

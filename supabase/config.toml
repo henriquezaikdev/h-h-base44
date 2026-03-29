@@ -12,3 +12,9 @@ verify_jwt = false
 
 [functions.assistente-cliente]
 verify_jwt = false
+
+[functions.calcular-score-reativacao]
+verify_jwt = false
+
+[functions.classificar-janela-longa]
+verify_jwt = false
