@@ -334,7 +334,7 @@ Os hooks usam as colunas CRM (status_crm, priority_crm, task_date, etc.)
 | description | text | notas/observações (2.0) |
 | client_id | uuid (fk → clients) | |
 | assigned_to | uuid (fk → sellers) | coluna original 2.0 |
-| priority | enum (baixa, normal, alta, urgente) | enum original 2.0 |
+| priority | enum (low, medium, high, urgent) | enum original 2.0 |
 | due_date | date | data original 2.0 |
 | done_at | timestamptz | |
 | status | enum task_status (open, done, cancelled) | enum original 2.0 |
