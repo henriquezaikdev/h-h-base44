@@ -162,13 +162,15 @@ const STATUS_CFG: Record<string, { label: string; text: string; bg: string }> = 
 }
 
 const ORIGEM_DISPLAY: Record<string, string> = {
+  prospeccao: 'Prospecção',
   ligacao: 'Prospecção',
   google: 'Google',
   indicacao: 'Indicação',
   filial: 'Filial',
-  porta_loja: 'Porta a porta',
+  porta_loja: 'Veio à loja',
   conta_azul: 'Conta Azul',
   conquistado: 'Conquistado',
+  outro: 'Outro',
 }
 
 const PRIORITY_CFG: Record<string, { label: string; text: string; bg: string }> = {
@@ -200,7 +202,7 @@ function ClientOriginBadges({ client }: { client: Client }) {
       badges.push({ label: 'Novo · Indicação', bg: 'bg-emerald-50', text: 'text-emerald-700' })
     } else if (client.origem === 'google') {
       badges.push({ label: 'Novo · Google', bg: 'bg-slate-100', text: 'text-slate-600' })
-    } else if (client.origem && ['ligacao', 'porta_loja', 'conquistado'].includes(client.origem)) {
+    } else if (client.origem && ['ligacao', 'prospeccao', 'porta_loja', 'conquistado'].includes(client.origem)) {
       badges.push({ label: 'Novo · Prospecção', bg: 'bg-[#EEF2FF]', text: 'text-[#3B5BDB]' })
     } else {
       badges.push({ label: 'Novo', bg: 'bg-[#EEF2FF]', text: 'text-[#3B5BDB]' })
@@ -885,13 +887,14 @@ export default function ClientePage() {
                         className={SELECT_CLS}
                       >
                         <option value="">Não informado</option>
-                        <option value="ligacao">Prospecção</option>
+                        <option value="prospeccao">Prospecção</option>
                         <option value="google">Google</option>
                         <option value="indicacao">Indicação</option>
                         <option value="filial">Filial</option>
-                        <option value="porta_loja">Porta a porta</option>
+                        <option value="porta_loja">Veio à loja</option>
                         <option value="conta_azul">Conta Azul</option>
                         <option value="conquistado">Conquistado</option>
+                        <option value="outro">Outro</option>
                       </select>
                     ) : <ReadValue value={ORIGEM_DISPLAY[client.origem ?? ''] ?? client.origem ?? 'Não informado'} />}
                   </div>

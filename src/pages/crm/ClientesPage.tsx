@@ -4,7 +4,7 @@ import {
   Users, UserPlus, RefreshCw, Clock, AlertTriangle, XCircle,
   Search, LayoutGrid, List, ChevronRight, ChevronLeft,
   Phone, MessageCircle, ArrowRight, TrendingUp, X, MapPin, FileText,
-  Building2,
+  Building2, Megaphone, Store, HelpCircle,
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
@@ -186,7 +186,7 @@ function OriginBadges({ c }: { c: ClientRow }) {
       badges.push({ label: 'Novo · Indicação', bg: 'bg-emerald-50', text: 'text-emerald-700' })
     } else if (c.origem === 'google') {
       badges.push({ label: 'Novo · Google', bg: 'bg-slate-100', text: 'text-slate-600' })
-    } else if (c.origem && ['ligacao', 'porta_loja', 'conquistado'].includes(c.origem)) {
+    } else if (c.origem && ['ligacao', 'prospeccao', 'porta_loja', 'conquistado'].includes(c.origem)) {
       badges.push({ label: 'Novo · Prospecção', bg: 'bg-[#EEF2FF]', text: 'text-[#3B5BDB]' })
     } else {
       badges.push({ label: 'Novo', bg: 'bg-[#EEF2FF]', text: 'text-[#3B5BDB]' })
@@ -679,16 +679,17 @@ export default function ClientesPage() {
 // ─── OriginPickerModal ────────────────────────────────────────────────────────
 
 const ORIGIN_OPTIONS = [
-  { value: 'ligacao',   label: 'Prospecção', desc: 'Contato ativo por telefone', icon: Phone },
-  { value: 'google',    label: 'Google',     desc: 'Encontrou via busca online',  icon: Search },
-  { value: 'indicacao', label: 'Indicação',  desc: 'Indicado por outro cliente',  icon: Users },
-  { value: 'filial',    label: 'Filial',     desc: 'Unidade filial de grupo',     icon: Building2 },
+  { value: 'prospeccao',  label: 'Prospecção',   desc: 'Mérito do vendedor',            icon: Megaphone },
+  { value: 'google',      label: 'Google',       desc: 'Encontrou via busca online',    icon: Search },
+  { value: 'indicacao',   label: 'Indicação',    desc: 'Mérito do vendedor',            icon: Users },
+  { value: 'filial',      label: 'Filial',       desc: 'Unidade filial de grupo',       icon: Building2 },
+  { value: 'porta_loja',  label: 'Veio à loja',  desc: 'Cliente veio presencialmente',  icon: Store },
+  { value: 'outro',       label: 'Outro',        desc: 'Origem não listada',            icon: HelpCircle },
 ] as const
 
 function OriginPickerModal({ onClose, onSelect }: { onClose: () => void; onSelect: (v: string) => void }) {
   const [selected, setSelected] = useState<string | null>(null)
 
-  // Fechar com Escape
   useEffect(() => {
     function handleKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', handleKey)
@@ -696,60 +697,61 @@ function OriginPickerModal({ onClose, onSelect }: { onClose: () => void; onSelec
   }, [onClose])
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl shadow-xl w-full max-w-md"
+        className="bg-white rounded-2xl shadow-xl w-full max-w-[560px] overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB]">
+        <div className="px-7 pt-6 pb-1 flex items-start justify-between">
           <div>
-            <h2 className="text-base font-semibold text-[#111827]">Novo Cliente</h2>
-            <p className="text-sm text-[#6B7280] mt-0.5">Como esse cliente chegou até nós?</p>
+            <h2 className="text-lg font-semibold text-[#111827] leading-tight">Novo Cliente</h2>
+            <p className="text-[13px] text-[#6B7280] mt-1">Como esse cliente chegou até nós?</p>
           </div>
           <button
             onClick={onClose}
             aria-label="Fechar"
-            className="p-2 rounded-lg text-[#9CA3AF] hover:text-[#374151] hover:bg-[#F3F4F6] transition-colors"
+            className="p-1.5 rounded-lg text-[#9CA3AF] hover:text-[#374151] hover:bg-[#F3F4F6] transition-colors -mr-1"
           >
             <X size={16} />
           </button>
         </div>
 
-        {/* Options */}
-        <div className="px-6 py-5 grid grid-cols-2 gap-3">
+        {/* Options — 3×2 grid */}
+        <div className="px-7 py-5 grid grid-cols-3 gap-3">
           {ORIGIN_OPTIONS.map(({ value, label, desc, icon: Icon }) => {
             const active = selected === value
             return (
               <button
                 key={value}
                 onClick={() => setSelected(value)}
-                className={`flex flex-col items-center text-center p-4 rounded-xl border-2 transition-all min-h-[112px] ${
+                className={`group flex flex-col items-center text-center rounded-xl border-[1.5px] p-4 min-h-[120px] transition-all outline-none focus-visible:ring-2 focus-visible:ring-[#3B5BDB]/30 ${
                   active
-                    ? 'border-[#3B5BDB] bg-[#EEF2FF] shadow-[0_0_0_1px_rgba(59,91,219,0.2)]'
-                    : 'border-[#E5E7EB] hover:border-[#C7D2FE] bg-white'
+                    ? 'border-[#3B5BDB] bg-[#3B5BDB]/[0.04] shadow-[0_0_0_1px_rgba(59,91,219,0.15)]'
+                    : 'border-[#E5E7EB] bg-white hover:border-[#3B5BDB]/30'
                 }`}
               >
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-2 transition-colors ${
-                  active ? 'bg-[#3B5BDB] text-white' : 'bg-[#F9FAFB] text-[#6B7280]'
+                <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-2.5 transition-colors ${
+                  active
+                    ? 'bg-[#3B5BDB] text-white shadow-sm'
+                    : 'bg-[#F3F4F6] text-[#6B7280] group-hover:bg-[#EEF2FF] group-hover:text-[#3B5BDB]'
                 }`}>
-                  <Icon size={18} />
+                  <Icon size={20} strokeWidth={1.75} />
                 </div>
-                <span className={`text-sm font-medium transition-colors ${active ? 'text-[#3B5BDB]' : 'text-[#111827]'}`}>
+                <span className={`text-[13px] font-semibold leading-tight transition-colors ${
+                  active ? 'text-[#3B5BDB]' : 'text-[#111827]'
+                }`}>
                   {label}
                 </span>
-                <span className="text-xs text-[#9CA3AF] mt-0.5 leading-tight">{desc}</span>
+                <span className="text-[11px] text-[#9CA3AF] mt-1 leading-snug">{desc}</span>
               </button>
             )
           })}
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-[#E5E7EB] flex items-center justify-end gap-2">
+        <div className="px-7 py-4 border-t border-[#F3F4F6] flex items-center justify-end gap-2.5">
           <button
             onClick={onClose}
             className="px-4 py-2 text-sm font-medium text-[#374151] border border-[#E5E7EB] rounded-lg hover:bg-[#F9FAFB] transition-colors"
@@ -759,7 +761,7 @@ function OriginPickerModal({ onClose, onSelect }: { onClose: () => void; onSelec
           <button
             onClick={() => selected && onSelect(selected)}
             disabled={!selected}
-            className="px-4 py-2 text-sm font-medium bg-[#3B5BDB] text-white rounded-lg hover:bg-[#3451C7] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="px-5 py-2 text-sm font-medium bg-[#3B5BDB] text-white rounded-lg hover:bg-[#3451C7] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             Continuar
           </button>
@@ -805,13 +807,15 @@ const EMPTY = {
 }
 
 const ORIGEM_LABELS: Record<string, string> = {
+  prospeccao: 'Prospecção',
   ligacao: 'Prospecção',
   google: 'Google',
   indicacao: 'Indicação',
   filial: 'Filial',
-  porta_loja: 'Porta a porta',
+  porta_loja: 'Veio à loja',
   conta_azul: 'Conta Azul',
   conquistado: 'Conquistado',
+  outro: 'Outro',
 }
 
 function NewClientModal({ onClose, onSaved, initialOrigem = '' }: { onClose: () => void; onSaved: () => void; initialOrigem?: string }) {
@@ -996,12 +1000,12 @@ function NewClientModal({ onClose, onSaved, initialOrigem = '' }: { onClose: () 
                 ) : (
                   <select value={form.origem} onChange={e => setForm(p => ({ ...p, origem: e.target.value }))} className={SELECT_CLS}>
                     <option value="">Selecionar…</option>
-                    <option value="ligacao">Prospecção</option>
+                    <option value="prospeccao">Prospecção</option>
                     <option value="google">Google</option>
                     <option value="indicacao">Indicação</option>
                     <option value="filial">Filial</option>
-                    <option value="porta_loja">Porta a porta</option>
-                    <option value="conquistado">Conquistado</option>
+                    <option value="porta_loja">Veio à loja</option>
+                    <option value="outro">Outro</option>
                   </select>
                 )}
               </div>
