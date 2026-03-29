@@ -6,6 +6,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const COMPANY_ID = '00000000-0000-0000-0000-000000000001'
+const DAY_MS = 86_400_000
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
@@ -15,55 +18,53 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
 
-    const companyId = '00000000-0000-0000-0000-000000000001'
     const now = new Date()
-    const eighteenMonthsAgo = new Date(now.getTime() - 548 * 86_400_000).toISOString()
-    const ninetyDaysAgo = new Date(now.getTime() - 90 * 86_400_000).toISOString()
+    const eighteenMonthsAgo = new Date(now.getTime() - 548 * DAY_MS).toISOString()
+    const ninetyDaysAgo = new Date(now.getTime() - 90 * DAY_MS).toISOString()
 
     // 1. Buscar todos os clientes da empresa
     const { data: clients, error: clientsErr } = await supabase
       .from('clients')
       .select('id')
-      .eq('company_id', companyId)
+      .eq('company_id', COMPANY_ID)
 
-    if (clientsErr) throw clientsErr
+    if (clientsErr) {
+      console.error('[janela-longa] Erro ao buscar clients:', clientsErr)
+      throw new Error(clientsErr.message)
+    }
+
     if (!clients || clients.length === 0) {
-      return new Response(JSON.stringify({ classificados_janela_longa: 0, total_processados: 0 }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      return new Response(
+        JSON.stringify({ classificados_janela_longa: 0, total_processados: 0 }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
-    const clientIds = clients.map((c: { id: string }) => c.id)
+    console.log(`[janela-longa] Processando ${clients.length} clientes`)
 
-    // 2. Buscar todos os pedidos aprovados/invoiced desses clientes
-    const { data: allOrders, error: ordersErr } = await supabase
-      .from('orders')
-      .select('id, client_id, created_at, status')
-      .eq('company_id', companyId)
-      .in('client_id', clientIds)
-      .in('status', ['approved', 'invoiced'])
-      .order('created_at', { ascending: true })
-
-    if (ordersErr) throw ordersErr
-
-    // 3. Agrupar pedidos por cliente
-    const ordersByClient = new Map<string, { created_at: string }[]>()
-    for (const o of (allOrders ?? [])) {
-      const list = ordersByClient.get(o.client_id) ?? []
-      list.push({ created_at: o.created_at })
-      ordersByClient.set(o.client_id, list)
-    }
-
-    // 4. Processar cada cliente
-    let classificadosJanelaLonga = 0
+    let classificados = 0
     let totalProcessados = 0
 
     for (const client of clients) {
-      const orders = ordersByClient.get(client.id) ?? []
 
-      // Precisa de pelo menos 2 pedidos para calcular intervalos
-      if (orders.length < 2) {
-        // Sem histórico suficiente — marcar como não-janela-longa
+      // 2. Buscar orders aprovados/invoiced ordenados por data
+      const { data: orders, error: ordersErr } = await supabase
+        .from('orders')
+        .select('id, created_at')
+        .eq('company_id', COMPANY_ID)
+        .eq('client_id', client.id)
+        .in('status', ['approved', 'invoiced'])
+        .order('created_at', { ascending: true })
+
+      if (ordersErr) {
+        console.error(`[janela-longa] Erro orders cliente ${client.id}:`, ordersErr.message)
+        continue
+      }
+
+      const orderList = orders ?? []
+
+      // Menos de 2 pedidos: sem dados para intervalo
+      if (orderList.length < 2) {
         await supabase
           .from('clients')
           .update({ janela_longa: false, intervalo_medio_dias: null, proxima_compra_estimada: null })
@@ -72,65 +73,73 @@ serve(async (req) => {
         continue
       }
 
-      // Calcular intervalos entre pedidos consecutivos
+      // 3. Calcular intervalos entre pedidos consecutivos
       const intervals: number[] = []
-      for (let i = 1; i < orders.length; i++) {
-        const prev = new Date(String(orders[i - 1].created_at).replace(' ', 'T'))
-        const curr = new Date(String(orders[i].created_at).replace(' ', 'T'))
-        const diffDays = Math.floor((curr.getTime() - prev.getTime()) / 86_400_000)
+      for (let i = 1; i < orderList.length; i++) {
+        const prev = new Date(String(orderList[i - 1].created_at).replace(' ', 'T'))
+        const curr = new Date(String(orderList[i].created_at).replace(' ', 'T'))
+        const diffDays = Math.floor((curr.getTime() - prev.getTime()) / DAY_MS)
         if (diffDays > 0) intervals.push(diffDays)
       }
 
-      const intervaloMedio = intervals.length > 0
-        ? Math.round(intervals.reduce((a, b) => a + b, 0) / intervals.length)
-        : 0
+      if (intervals.length === 0) {
+        await supabase
+          .from('clients')
+          .update({ janela_longa: false, intervalo_medio_dias: null, proxima_compra_estimada: null })
+          .eq('id', client.id)
+        totalProcessados++
+        continue
+      }
 
-      // Contar pedidos nos últimos 18 meses
-      const totalRecente = orders.filter(o => {
+      const intervaloMedio = Math.round(intervals.reduce((a, b) => a + b, 0) / intervals.length)
+
+      // 4. Contar pedidos nos últimos 18 meses
+      const totalRecente = orderList.filter(o => {
         const d = new Date(String(o.created_at).replace(' ', 'T'))
         return d.getTime() >= new Date(eighteenMonthsAgo).getTime()
       }).length
 
-      // Verificar se tem pedido nos últimos 90 dias
-      const temPedidoRecente = orders.some(o => {
+      // 5. Pedido recente (últimos 90 dias)?
+      const temPedidoRecente = orderList.some(o => {
         const d = new Date(String(o.created_at).replace(' ', 'T'))
         return d.getTime() >= new Date(ninetyDaysAgo).getTime()
       })
 
-      // Regra janela_longa
+      // 6. Regra janela_longa
       const isJanelaLonga = intervaloMedio > 60 && totalRecente >= 3 && !temPedidoRecente
 
-      // proxima_compra_estimada = data do último pedido + intervalo_medio_dias
+      // 7. proxima_compra_estimada
       let proximaCompra: string | null = null
-      if (intervaloMedio > 0 && orders.length > 0) {
-        const lastOrderDate = new Date(String(orders[orders.length - 1].created_at).replace(' ', 'T'))
-        const estimated = new Date(lastOrderDate.getTime() + intervaloMedio * 86_400_000)
-        proximaCompra = estimated.toISOString().slice(0, 10) // DATE format YYYY-MM-DD
-      }
+      const lastOrderDate = new Date(String(orderList[orderList.length - 1].created_at).replace(' ', 'T'))
+      const estimated = new Date(lastOrderDate.getTime() + intervaloMedio * DAY_MS)
+      proximaCompra = estimated.toISOString().slice(0, 10)
 
+      // 8. Update
       const { error: updateErr } = await supabase
         .from('clients')
         .update({
           janela_longa: isJanelaLonga,
-          intervalo_medio_dias: intervaloMedio > 0 ? intervaloMedio : null,
+          intervalo_medio_dias: intervaloMedio,
           proxima_compra_estimada: proximaCompra,
         })
         .eq('id', client.id)
 
       if (!updateErr) {
         totalProcessados++
-        if (isJanelaLonga) classificadosJanelaLonga++
+        if (isJanelaLonga) classificados++
+      } else {
+        console.error(`[janela-longa] Erro update cliente ${client.id}:`, updateErr.message)
       }
     }
 
-    console.log(`[classificar-janela-longa] Janela longa: ${classificadosJanelaLonga} | Total: ${totalProcessados} | ${now.toISOString()}`)
+    console.log(`[janela-longa] Janela longa: ${classificados} | Total: ${totalProcessados} | ${now.toISOString()}`)
 
     return new Response(
-      JSON.stringify({ classificados_janela_longa: classificadosJanelaLonga, total_processados: totalProcessados }),
+      JSON.stringify({ classificados_janela_longa: classificados, total_processados: totalProcessados }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (err) {
-    console.error('[classificar-janela-longa] Erro:', err)
+    console.error('[janela-longa] Erro fatal:', err)
     return new Response(
       JSON.stringify({ error: String(err) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

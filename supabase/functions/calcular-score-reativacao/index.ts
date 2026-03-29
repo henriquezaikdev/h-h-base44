@@ -6,6 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const COMPANY_ID = '00000000-0000-0000-0000-000000000001'
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
@@ -15,92 +17,88 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
 
-    const companyId = '00000000-0000-0000-0000-000000000001'
     const now = new Date()
     const twelveMonthsAgo = new Date(now.getTime() - 365 * 86_400_000).toISOString()
 
-    // 1. Buscar clientes inativos que não são janela_longa
-    const { data: inactiveClients, error: clientsErr } = await supabase
+    // 1. Buscar clientes inativos (não janela_longa)
+    const { data: clients, error: clientsErr } = await supabase
       .from('clients')
       .select('id, last_order_at, total_orders')
-      .eq('company_id', companyId)
+      .eq('company_id', COMPANY_ID)
       .eq('status', 'inactive')
       .eq('janela_longa', false)
 
-    if (clientsErr) throw clientsErr
-    if (!inactiveClients || inactiveClients.length === 0) {
-      return new Response(JSON.stringify({ processed: 0, timestamp: now.toISOString() }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+    if (clientsErr) {
+      console.error('[calcular-score] Erro ao buscar clients:', clientsErr)
+      throw new Error(clientsErr.message)
     }
 
-    const clientIds = inactiveClients.map((c: { id: string }) => c.id)
-
-    // 2. Buscar pedidos dos últimos 12 meses para esses clientes
-    const { data: orders, error: ordersErr } = await supabase
-      .from('orders')
-      .select('id, client_id, total, created_at, status')
-      .eq('company_id', companyId)
-      .in('client_id', clientIds)
-      .in('status', ['approved', 'invoiced'])
-      .gte('created_at', twelveMonthsAgo)
-
-    if (ordersErr) throw ordersErr
-
-    // 3. Agrupar pedidos por cliente
-    const ordersByClient = new Map<string, { total: number; count: number }>()
-    for (const o of (orders ?? [])) {
-      const existing = ordersByClient.get(o.client_id) ?? { total: 0, count: 0 }
-      existing.total += (o.total ?? 0)
-      existing.count += 1
-      ordersByClient.set(o.client_id, existing)
+    if (!clients || clients.length === 0) {
+      return new Response(
+        JSON.stringify({ processed: 0, timestamp: now.toISOString(), message: 'Nenhum cliente inativo encontrado' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
-    // 4. Calcular score para cada cliente
+    console.log(`[calcular-score] Encontrados ${clients.length} clientes inativos`)
+
     let processed = 0
-    for (const client of inactiveClients) {
-      const orderData = ordersByClient.get(client.id) ?? { total: 0, count: 0 }
 
-      // valor_medio_mensal: receita últimos 12 meses / 12
-      const valorMedioMensal = orderData.total / 12
+    // 2. Para cada cliente, queries individuais
+    for (const client of clients) {
 
-      // dias_inativo: dias desde último pedido
-      let diasInativo = 0
-      if (client.last_order_at) {
-        const lastOrder = new Date(String(client.last_order_at).replace(' ', 'T'))
-        diasInativo = Math.floor((now.getTime() - lastOrder.getTime()) / 86_400_000)
-      } else {
-        diasInativo = 365 // sem pedidos = 1 ano como fallback
+      // 2a. Receita últimos 12 meses
+      const { data: recentOrders, error: ordersErr } = await supabase
+        .from('orders')
+        .select('total')
+        .eq('company_id', COMPANY_ID)
+        .eq('client_id', client.id)
+        .in('status', ['approved', 'invoiced'])
+        .gte('created_at', twelveMonthsAgo)
+
+      if (ordersErr) {
+        console.error(`[calcular-score] Erro orders cliente ${client.id}:`, ordersErr.message)
+        continue
       }
 
-      // total_pedidos_historico
-      const totalPedidosHistorico = client.total_orders ?? 0
+      const receitaTotal = (recentOrders ?? []).reduce((sum: number, o: { total: number }) => sum + (o.total ?? 0), 0)
+      const valorMedioMensal = receitaTotal / 12
 
-      // sazonalidade_bonus: placeholder
-      const sazonalidadeBonus = 0
+      // 2b. Dias inativo
+      let diasInativo = 999
+      if (client.last_order_at) {
+        const lastDate = new Date(String(client.last_order_at).replace(' ', 'T'))
+        diasInativo = Math.floor((now.getTime() - lastDate.getTime()) / 86_400_000)
+      }
 
-      // Score = (valor_medio_mensal × 0.4) + (dias_inativo × 0.3) + (total_pedidos_historico × 0.2) + (sazonalidade_bonus × 0.1)
-      const score = (valorMedioMensal * 0.4) + (diasInativo * 0.3) + (totalPedidosHistorico * 0.2) + (sazonalidadeBonus * 0.1)
+      // 2c. Total pedidos historico
+      const totalPedidos = client.total_orders ?? 0
 
-      // Arredondar para 2 casas decimais
+      // 3. Calcular score
+      const score = (valorMedioMensal * 0.4) + (diasInativo * 0.3) + (totalPedidos * 0.2) + (0 * 0.1)
       const roundedScore = Math.round(score * 100) / 100
 
+      // 4. Update
       const { error: updateErr } = await supabase
         .from('clients')
         .update({ reativacao_score: roundedScore })
         .eq('id', client.id)
 
-      if (!updateErr) processed++
+      if (updateErr) {
+        console.error(`[calcular-score] Erro update cliente ${client.id}:`, updateErr.message)
+      } else {
+        processed++
+      }
     }
 
-    console.log(`[calcular-score-reativacao] Processados: ${processed}/${inactiveClients.length} | ${now.toISOString()}`)
+    console.log(`[calcular-score] Concluido: ${processed}/${clients.length} | ${now.toISOString()}`)
 
     return new Response(
-      JSON.stringify({ processed, timestamp: now.toISOString() }),
+      JSON.stringify({ processed, total: clients.length, timestamp: now.toISOString() }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (err) {
-    console.error('[calcular-score-reativacao] Erro:', err)
+    console.error('[calcular-score] Erro fatal:', err)
     return new Response(
       JSON.stringify({ error: String(err) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
