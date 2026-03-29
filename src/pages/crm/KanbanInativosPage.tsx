@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import {
   ChevronLeft, ChevronDown, ChevronUp, Phone, MessageCircle,
   Target, Zap, TrendingUp, DollarSign, Clock, AlertTriangle,
-  Plus, Calendar,
+  Plus, Calendar, XCircle, Check,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../../lib/supabase'
@@ -102,6 +102,8 @@ export default function KanbanInativosPage() {
   const [silencioProgramadoOpen, setSilencioProgramadoOpen] = useState(true)
   const [creatingTask, setCreatingTask] = useState<string | null>(null)
   const [expandedOrders, setExpandedOrders] = useState<Record<string, RecentOrder[]>>({})
+  const [discardedIds, setDiscardedIds] = useState<Set<string>>(new Set())
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
   // ── Main query ──────────────────────────────────────────────────────────
 
@@ -206,10 +208,11 @@ export default function KanbanInativosPage() {
     setCreatingTask(client.id)
     try {
       const dueDate = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10)
-      await supabase.from('tasks').insert({
+      const { error } = await supabase.from('tasks').insert({
         title: `Reativacao: ${client.name}`,
         status: 'open',
         status_crm: 'pendente',
+        priority: 'alta',
         priority_crm: 'alta',
         client_id: client.id,
         assigned_to_seller_id: seller.id,
@@ -219,12 +222,30 @@ export default function KanbanInativosPage() {
         due_date: dueDate,
         task_date: dueDate,
         task_category: 'reativacao',
+        source_module: 'inativos',
       })
+      if (error) {
+        console.error('[Reativacao] Erro insert task:', error)
+        showToast('error', `Erro: ${error.message}`)
+        return
+      }
       setStatusMap(prev => ({ ...prev, [client.id]: 'em_contato' }))
+      showToast('success', `Reativacao iniciada para ${client.name}`)
       refetch()
+    } catch (err) {
+      showToast('error', `Erro inesperado: ${String(err)}`)
     } finally {
       setCreatingTask(null)
     }
+  }
+
+  function handleDescartar(clientId: string) {
+    setDiscardedIds(prev => new Set(prev).add(clientId))
+  }
+
+  function showToast(type: 'success' | 'error', message: string) {
+    setToast({ type, message })
+    setTimeout(() => setToast(null), 4000)
   }
 
   // ── Metrics cards ───────────────────────────────────────────────────────
@@ -308,7 +329,7 @@ export default function KanbanInativosPage() {
           </div>
         ) : (
           <div className="space-y-2">
-            {inactiveClients.map((client, index) => {
+            {inactiveClients.filter(c => !discardedIds.has(c.id)).map((client, index) => {
               const isExpanded = expandedId === client.id
               const dias = daysSince(client.last_order_at)
               const valorMensal = (client.total_revenue ?? 0) / Math.max(1, Math.ceil(((daysSince(client.created_at) ?? 365)) / 30))
@@ -393,16 +414,29 @@ export default function KanbanInativosPage() {
                             </a>
                           </>
                         )}
-                        {status === 'nao_iniciado' && (
-                          <button
-                            onClick={() => handleIniciarReativacao(client)}
-                            disabled={creatingTask === client.id}
-                            className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium bg-[#3B5BDB] text-white rounded-md hover:bg-[#3451C7] disabled:opacity-50 transition-colors"
-                          >
-                            <Plus size={11} />
-                            {creatingTask === client.id ? '...' : 'Iniciar'}
-                          </button>
-                        )}
+                        {status === 'nao_iniciado' ? (
+                          <>
+                            <button
+                              onClick={() => handleDescartar(client.id)}
+                              title="Descartar"
+                              className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-[#6B7280] border border-[#E5E7EB] rounded-md hover:bg-[#F3F4F6] transition-colors"
+                            >
+                              <XCircle size={11} />
+                            </button>
+                            <button
+                              onClick={() => handleIniciarReativacao(client)}
+                              disabled={creatingTask === client.id}
+                              className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium bg-[#3B5BDB] text-white rounded-md hover:bg-[#3451C7] disabled:opacity-50 transition-colors"
+                            >
+                              <Plus size={11} />
+                              {creatingTask === client.id ? '...' : 'Iniciar'}
+                            </button>
+                          </>
+                        ) : status === 'em_contato' ? (
+                          <span className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 rounded-md">
+                            <Check size={11} /> Task criada
+                          </span>
+                        ) : null}
                       </div>
 
                       {/* Expand indicator */}
@@ -521,6 +555,25 @@ export default function KanbanInativosPage() {
         )}
 
       </div>
+
+      {/* Toast */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium ${
+              toast.type === 'success'
+                ? 'bg-emerald-600 text-white'
+                : 'bg-red-600 text-white'
+            }`}
+          >
+            {toast.type === 'success' ? <Check size={14} /> : <AlertTriangle size={14} />}
+            {toast.message}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
