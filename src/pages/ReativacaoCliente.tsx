@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ChevronLeft, Phone, MessageCircle, Mail, MapPin,
-  Check, AlertTriangle, Plus, Clock, FileText,
+  Check, AlertTriangle, Plus, Clock, FileText, ShoppingCart,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../lib/supabase'
@@ -380,14 +380,22 @@ export default function ReativacaoCliente() {
             </div>
           )}
 
-          {/* Criar orçamento */}
+          {/* Orçamento + Pedido */}
           {!isFinal && (
-            <button
-              onClick={() => nav('/pedidos', { state: { clientId: cliente.id, openNewOrder: true } })}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-[#3B5BDB] border border-[#3B5BDB]/20 rounded-xl hover:bg-[#EEF2FF] transition-colors"
-            >
-              <FileText size={14} /> Criar orçamento para este cliente
-            </button>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => nav('/pedidos', { state: { clientId: cliente.id, openNewQuote: true } })}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-[#3B5BDB] border border-[#3B5BDB]/20 rounded-xl hover:bg-[#EEF2FF] transition-colors"
+              >
+                <FileText size={14} /> Criar orçamento
+              </button>
+              <button
+                onClick={() => nav('/pedidos', { state: { clientId: cliente.id, openNewOrder: true } })}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-[#3B5BDB] rounded-xl hover:bg-[#3451C7] transition-colors"
+              >
+                <ShoppingCart size={14} /> Criar pedido
+              </button>
+            </div>
           )}
 
           {/* Ações finais */}
