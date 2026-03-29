@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import {
   ChevronLeft, ChevronRight, Search, AlertCircle,
   Edit2, Trash2, ChevronDown,
@@ -185,6 +185,7 @@ interface DocModalProps {
   sellers: { id: string; name: string }[]
   onClose: () => void
   onSaved: () => void
+  initialClientId?: string | null
 }
 
 function SectionTitle({ children }: { children: string }) {
@@ -198,7 +199,7 @@ function SectionTitle({ children }: { children: string }) {
   )
 }
 
-function DocModal({ mode, companyId, sellerId, sellers, onClose, onSaved }: DocModalProps) {
+function DocModal({ mode, companyId, sellerId, sellers, onClose, onSaved, initialClientId }: DocModalProps) {
 
   // ── Section 1: Header ──────────────────────────────────────────────────────
   const [tipo,           setTipo]           = useState<'quote' | 'order'>(mode)
@@ -250,6 +251,15 @@ function DocModal({ mode, companyId, sellerId, sellers, onClose, onSaved }: DocM
   const [newProductForm, setNewProductForm] = useState({ name: '', sku: '', ncm: '', unit: '', price: '', cost: '' })
   const [savingProduct,  setSavingProduct]  = useState(false)
   const [productFormErr, setProductFormErr] = useState<string | null>(null)
+
+  // ── Auto-load client from initialClientId ───────────────────────────────
+
+  useEffect(() => {
+    if (!initialClientId || selectedClient) return
+    supabase.from('clients').select('id, name, cnpj').eq('id', initialClientId).single()
+      .then(({ data }) => { if (data) selectClient(data as ClientResult) })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialClientId])
 
   // ── Auto-generate sequential number ──────────────────────────────────────
 
@@ -1196,6 +1206,7 @@ function RejectModal({ target, onClose, onRejected }: RejectModalProps) {
 export default function PedidosPage() {
   const { seller, role } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const canSeeAll      = role ? FULL_ACCESS.includes(role) : false
   const canSeeVendedor = canSeeAll
@@ -1218,9 +1229,27 @@ export default function PedidosPage() {
   const [quoteStatusFilter, setQuoteStatusFilter] = useState<'all' | QuoteStatus>('all')
 
   // ── Modal state ───────────────────────────────────────────────────────────
-  const [docModalMode,  setDocModalMode]  = useState<null | 'quote' | 'order'>(null)
-  const [rejectTarget,  setRejectTarget]  = useState<RejectTarget | null>(null)
-  const [convertingId,  setConvertingId]  = useState<string | null>(null)
+  const [docModalMode,    setDocModalMode]    = useState<null | 'quote' | 'order'>(null)
+  const [docModalClientId, setDocModalClientId] = useState<string | null>(null)
+  const [rejectTarget,    setRejectTarget]    = useState<RejectTarget | null>(null)
+  const [convertingId,    setConvertingId]    = useState<string | null>(null)
+
+  // ── Open modal from router state (e.g. from ReativacaoCliente) ──────────
+  useEffect(() => {
+    const st = location.state as { clientId?: string; openNewOrder?: boolean; openNewQuote?: boolean } | null
+    if (!st) return
+    if (st.openNewOrder && st.clientId) {
+      setDocModalMode('order')
+      setDocModalClientId(st.clientId)
+      setMainTab('orders')
+    } else if (st.openNewQuote && st.clientId) {
+      setDocModalMode('quote')
+      setDocModalClientId(st.clientId)
+      setMainTab('quotes')
+    }
+    // Clear state to prevent re-opening on navigation
+    window.history.replaceState({}, '')
+  }, [location.state])
 
   // ── Queries ───────────────────────────────────────────────────────────────
 
@@ -1891,8 +1920,9 @@ export default function PedidosPage() {
           companyId={seller?.company_id ?? ''}
           sellerId={seller?.id ?? ''}
           sellers={sellersList}
-          onClose={() => setDocModalMode(null)}
-          onSaved={() => { refetchQuotes(); refetchOrders() }}
+          initialClientId={docModalClientId}
+          onClose={() => { setDocModalMode(null); setDocModalClientId(null) }}
+          onSaved={() => { refetchQuotes(); refetchOrders(); setDocModalClientId(null) }}
         />
       )}
 
