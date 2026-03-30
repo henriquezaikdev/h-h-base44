@@ -11,7 +11,7 @@ const pct = (v: number) => `${v.toFixed(1)}%`
 type Accent = 'indigo' | 'emerald' | 'amber' | 'rose' | 'violet' | 'sky'
 
 const ACCENT: Record<Accent, { card: string; iconBg: string; iconColor: string; labelColor: string; valueColor: string }> = {
-  indigo:  { card: 'bg-[#EEF2FF] border-[#C7D2FE]', iconBg: 'bg-[#3B5BDB]', iconColor: 'text-white', labelColor: 'text-[#4338CA]', valueColor: 'text-[#1E1B4B]' },
+  indigo:  { card: 'bg-[#EEF2FF] border-[#C7D2FE]', iconBg: 'bg-primary', iconColor: 'text-white', labelColor: 'text-[#4338CA]', valueColor: 'text-[#1E1B4B]' },
   emerald: { card: 'bg-emerald-50 border-emerald-200', iconBg: 'bg-emerald-500', iconColor: 'text-white', labelColor: 'text-emerald-700', valueColor: 'text-emerald-900' },
   amber:   { card: 'bg-amber-50 border-amber-200', iconBg: 'bg-amber-500', iconColor: 'text-white', labelColor: 'text-amber-700', valueColor: 'text-amber-900' },
   rose:    { card: 'bg-rose-50 border-rose-200', iconBg: 'bg-rose-500', iconColor: 'text-white', labelColor: 'text-rose-700', valueColor: 'text-rose-900' },

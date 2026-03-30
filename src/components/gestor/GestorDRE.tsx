@@ -36,17 +36,17 @@ export function GestorDRE({ kpis }: { kpis: GestorKPIs }) {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3, duration: 0.4 }}
-      className="bg-white rounded-xl border border-[#E5E7EB] p-6"
+      className="bg-white rounded-xl border border-border p-6"
     >
-      <h3 className="text-[11px] font-semibold text-[#9CA3AF] uppercase tracking-widest mb-4">
+      <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-4">
         Composição do Resultado
       </h3>
       <div className="space-y-0">
         {rows.map((row, i) => (
           <div key={i} className={`flex items-center justify-between py-3 ${
-            row.separator ? 'border-t-2 border-[#E5E7EB] mt-1 pt-3' : ''
-          } ${i > 0 && !row.separator ? 'border-t border-[#F3F4F6]' : ''}`}>
-            <span className={`text-sm ${row.bold ? 'font-semibold text-[#111827]' : 'text-[#6B7280]'} ${row.indent ? 'pl-3' : ''}`}>
+            row.separator ? 'border-t-2 border-border mt-1 pt-3' : ''
+          } ${i > 0 && !row.separator ? 'border-t border-border/50' : ''}`}>
+            <span className={`text-sm ${row.bold ? 'font-semibold text-foreground' : 'text-muted-foreground'} ${row.indent ? 'pl-3' : ''}`}>
               {row.label}
             </span>
             <span className={`tabular-nums font-mono ${row.bold ? 'font-bold text-base' : 'text-sm font-medium'} ${row.color}`}>

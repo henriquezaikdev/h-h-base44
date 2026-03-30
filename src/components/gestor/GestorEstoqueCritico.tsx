@@ -10,7 +10,7 @@ export function GestorEstoqueCritico({ products }: { products: CriticalProduct[]
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.4, duration: 0.4 }}
-      className="bg-white rounded-xl border border-red-200"
+      className="bg-card rounded-xl border border-red-200"
     >
       <div className="px-6 py-4 border-b border-red-100 flex items-center gap-2">
         <div className="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center">
@@ -24,15 +24,15 @@ export function GestorEstoqueCritico({ products }: { products: CriticalProduct[]
       <div className="divide-y divide-red-50">
         {products.map(p => (
           <div key={p.id} className="px-6 py-2.5 flex items-center gap-3 hover:bg-red-50/30 transition-colors">
-            <span className="text-sm text-[#111827] flex-1 truncate">{p.name}</span>
+            <span className="text-sm text-foreground flex-1 truncate">{p.name}</span>
             <div className="flex items-center gap-4 shrink-0">
               <div className="text-right">
-                <span className="text-[10px] text-[#9CA3AF]">Atual</span>
+                <span className="text-[10px] text-muted-foreground">Atual</span>
                 <p className="text-sm font-semibold text-red-600 tabular-nums">{p.stock_qty}</p>
               </div>
               <div className="text-right">
-                <span className="text-[10px] text-[#9CA3AF]">Mín</span>
-                <p className="text-sm font-medium text-[#6B7280] tabular-nums">{p.stock_min}</p>
+                <span className="text-[10px] text-muted-foreground">Mín</span>
+                <p className="text-sm font-medium text-muted-foreground tabular-nums">{p.stock_min}</p>
               </div>
             </div>
           </div>

@@ -56,11 +56,11 @@ export default function GestorPage() {
 
   if (data.loading) {
     return (
-      <div className="min-h-screen bg-[#FAFAF9] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
           className="flex flex-col items-center gap-3">
-          <Loader2 size={24} className="animate-spin text-[#3B5BDB]" />
-          <span className="text-sm text-[#9CA3AF]">Carregando painel...</span>
+          <Loader2 size={24} className="animate-spin text-primary" />
+          <span className="text-sm text-muted-foreground">Carregando painel...</span>
         </motion.div>
       </div>
     )
@@ -75,31 +75,31 @@ export default function GestorPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-[#FAFAF9]">
+    <div className="min-h-screen bg-background">
       {/* ═══ HEADER (sticky) ═══ */}
-      <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-sm border-b border-[#E5E7EB]">
+      <div className="sticky top-0 z-20 bg-card/95 backdrop-blur-sm border-b border-border">
         <div className="max-w-[1280px] mx-auto px-6 py-4">
           <div className="flex items-center justify-between mb-4">
             <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#EEF2FF] flex items-center justify-center">
-                  <BarChart3 size={20} className="text-[#3B5BDB]" strokeWidth={1.75} />
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <BarChart3 size={20} className="text-primary" strokeWidth={1.75} />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-[#111827]">Painel de Gestão</h1>
-                  <p className="text-xs text-[#9CA3AF] capitalize">{periodLabel}</p>
+                  <h1 className="text-xl font-bold text-foreground">Painel de Gestão</h1>
+                  <p className="text-xs text-muted-foreground capitalize">{periodLabel}</p>
                 </div>
               </div>
             </motion.div>
 
             <div className="flex items-center gap-2">
-              <Calendar size={14} className="text-[#9CA3AF]" />
+              <Calendar size={14} className="text-muted-foreground" />
               <select value={month} onChange={e => setMonth(Number(e.target.value))}
-                className="text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 bg-white outline-none focus:border-[#3B5BDB] text-[#374151]">
+                className="text-sm border border-border rounded-lg px-3 py-1.5 bg-card outline-none focus:border-primary text-foreground/80">
                 {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
               </select>
               <select value={year} onChange={e => setYear(Number(e.target.value))}
-                className="text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 bg-white outline-none focus:border-[#3B5BDB] text-[#374151]">
+                className="text-sm border border-border rounded-lg px-3 py-1.5 bg-card outline-none focus:border-primary text-foreground/80">
                 {[2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
               </select>
             </div>
@@ -109,10 +109,10 @@ export default function GestorPage() {
 
       <div className="max-w-[1280px] mx-auto px-6 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full justify-start bg-white border border-[#E5E7EB] p-1 rounded-xl mb-6 gap-1 flex-wrap">
+          <TabsList className="w-full justify-start bg-card border border-border p-1 rounded-xl mb-6 gap-1 flex-wrap">
             {mainTabs.map(tab => (
               <TabsTrigger key={tab.value} value={tab.value}
-                className="gap-1.5 px-4 py-2.5 rounded-lg text-xs font-medium data-[state=active]:bg-[#3B5BDB] data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=inactive]:text-[#6B7280] data-[state=inactive]:hover:text-[#111827] data-[state=inactive]:hover:bg-[#F3F4F6] transition-all">
+                className="gap-1.5 px-4 py-2.5 rounded-lg text-xs font-medium data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:text-foreground data-[state=inactive]:hover:bg-muted transition-all">
                 <tab.icon size={14} />
                 <span className="hidden sm:inline">{tab.label}</span>
               </TabsTrigger>
@@ -123,8 +123,8 @@ export default function GestorPage() {
           <TabsContent value="executivo">
             <div className="space-y-6">
               <motion.div {...fadeUp(0)} className="space-y-1">
-                <h2 className="text-lg font-semibold text-[#111827]">Visão Executiva</h2>
-                <p className="text-sm text-[#9CA3AF]">Resumo dos indicadores principais do período</p>
+                <h2 className="text-lg font-semibold text-foreground">Visão Executiva</h2>
+                <p className="text-sm text-muted-foreground">Resumo dos indicadores principais do período</p>
               </motion.div>
               <GestorKPICards kpis={data.kpis} />
               <GestorDRE kpis={data.kpis} />
@@ -201,12 +201,12 @@ function ComercialTab({ data, month, year }: { data: ReturnType<typeof useGestor
   return (
     <div className="space-y-6">
       <motion.div {...fadeUp(0)} className="space-y-1">
-        <h2 className="text-lg font-semibold text-[#111827]">Comercial</h2>
-        <p className="text-sm text-[#9CA3AF]">Vendedores, clientes e metas comerciais</p>
+        <h2 className="text-lg font-semibold text-foreground">Comercial</h2>
+        <p className="text-sm text-muted-foreground">Vendedores, clientes e metas comerciais</p>
       </motion.div>
 
       <Tabs defaultValue="vendedores">
-        <TabsList className="bg-white border border-[#E5E7EB] p-0.5 rounded-lg gap-0.5">
+        <TabsList className="bg-card border border-border p-0.5 rounded-lg gap-0.5">
           <TabsTrigger value="vendedores" className="text-xs gap-1"><Users size={12} /> Vendedores</TabsTrigger>
           <TabsTrigger value="fila" className="text-xs gap-1"><Target size={12} /> Fila Comercial</TabsTrigger>
           <TabsTrigger value="clientes" className="text-xs gap-1"><Users size={12} /> Top Clientes</TabsTrigger>
@@ -221,15 +221,15 @@ function ComercialTab({ data, month, year }: { data: ReturnType<typeof useGestor
             {/* Saúde do Negócio — Summary KPIs */}
             <div className="grid grid-cols-5 gap-3">
               {[
-                { label: 'Receita', value: fmt(data.kpis.revenue), accent: 'bg-white border-[#E5E7EB]' },
+                { label: 'Receita', value: fmt(data.kpis.revenue), accent: 'bg-card border-border' },
                 { label: 'Resultado Real', value: fmt(data.kpis.profit - data.kpis.totalComissao), accent: (data.kpis.profit - data.kpis.totalComissao) >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200' },
-                { label: 'Margem Média', value: `${data.kpis.marginPercent.toFixed(1)}%`, accent: 'bg-white border-[#E5E7EB]' },
-                { label: 'Vendedores', value: String(sellersResult.filter(s => s.revenue > 0).length), accent: 'bg-white border-[#E5E7EB]' },
-                { label: 'Pedidos', value: String(data.kpis.ordersCount), accent: 'bg-white border-[#E5E7EB]' },
+                { label: 'Margem Média', value: `${data.kpis.marginPercent.toFixed(1)}%`, accent: 'bg-card border-border' },
+                { label: 'Vendedores', value: String(sellersResult.filter(s => s.revenue > 0).length), accent: 'bg-card border-border' },
+                { label: 'Pedidos', value: String(data.kpis.ordersCount), accent: 'bg-card border-border' },
               ].map(k => (
                 <div key={k.label} className={`rounded-xl border ${k.accent} p-4`}>
-                  <p className="text-[10px] text-[#9CA3AF] font-medium uppercase tracking-wide">{k.label}</p>
-                  <p className="text-lg font-bold text-[#111827] mt-1 tabular-nums">{k.value}</p>
+                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">{k.label}</p>
+                  <p className="text-lg font-bold text-foreground mt-1 tabular-nums">{k.value}</p>
                 </div>
               ))}
             </div>
@@ -243,13 +243,13 @@ function ComercialTab({ data, month, year }: { data: ReturnType<typeof useGestor
 
                 return (
                   <motion.div key={s.id} {...fadeUp(i * 0.05)}
-                    className="bg-white rounded-xl border border-[#E5E7EB] p-5 hover:border-[#D1D5DB] hover:shadow-sm transition-all duration-200">
+                    className="bg-card rounded-xl border border-border p-5 hover:border-primary/40 hover:shadow-sm transition-all duration-200">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-[#EEF2FF] flex items-center justify-center text-xs font-bold text-[#3B5BDB]">{initials}</div>
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">{initials}</div>
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold text-[#111827] truncate">{s.name}</p>
-                          <p className="text-[11px] text-[#9CA3AF]">{s.ordersCount} pedidos · {s.clientsCount} clientes</p>
+                          <p className="text-sm font-semibold text-foreground truncate">{s.name}</p>
+                          <p className="text-[11px] text-muted-foreground">{s.ordersCount} pedidos · {s.clientsCount} clientes</p>
                         </div>
                       </div>
                       {status && <span className={`text-[9px] font-bold px-2 py-1 rounded-md ${statusColor}`}>{status}</span>}
@@ -257,11 +257,11 @@ function ComercialTab({ data, month, year }: { data: ReturnType<typeof useGestor
 
                     <div className="grid grid-cols-2 gap-3 mb-3">
                       <div>
-                        <p className="text-[10px] text-[#9CA3AF]">Faturado</p>
-                        <p className="text-lg font-bold text-[#111827] tabular-nums">{fmtK(s.revenue)}</p>
+                        <p className="text-[10px] text-muted-foreground">Faturado</p>
+                        <p className="text-lg font-bold text-foreground tabular-nums">{fmtK(s.revenue)}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] text-[#9CA3AF]">Margem</p>
+                        <p className="text-[10px] text-muted-foreground">Margem</p>
                         <p className={`text-lg font-bold tabular-nums ${s.marginBruta >= 30 ? 'text-emerald-600' : s.marginBruta >= 15 ? 'text-amber-600' : 'text-rose-600'}`}>{s.marginBruta.toFixed(1)}%</p>
                       </div>
                     </div>
@@ -269,46 +269,46 @@ function ComercialTab({ data, month, year }: { data: ReturnType<typeof useGestor
                     {s.salesTarget > 0 ? (
                       <div>
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-[10px] text-[#9CA3AF]">Eficiência de Meta</span>
+                          <span className="text-[10px] text-muted-foreground">Eficiência de Meta</span>
                           <span className={`text-[10px] font-bold ${s.goalPercent >= 100 ? 'text-emerald-600' : s.goalPercent >= 70 ? 'text-amber-600' : 'text-red-500'}`}>{Math.round(s.goalPercent)}%</span>
                         </div>
                         <Progress value={Math.min(s.goalPercent, 100)} className={`h-2 ${s.goalPercent >= 100 ? '[&>div]:bg-emerald-500' : s.goalPercent >= 70 ? '[&>div]:bg-amber-500' : '[&>div]:bg-red-400'}`} />
-                        <p className="text-[10px] text-[#9CA3AF] mt-1">Meta: {fmtK(s.salesTarget)}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1">Meta: {fmtK(s.salesTarget)}</p>
                       </div>
-                    ) : <p className="text-[10px] text-[#D1D5DB]">Meta não configurada</p>}
+                    ) : <p className="text-[10px] text-muted-foreground/50">Meta não configurada</p>}
                   </motion.div>
                 )
               })}
-              {sellersResult.length === 0 && <p className="col-span-3 py-12 text-center text-sm text-[#9CA3AF]">Nenhum vendedor com vendas</p>}
+              {sellersResult.length === 0 && <p className="col-span-3 py-12 text-center text-sm text-muted-foreground">Nenhum vendedor com vendas</p>}
             </div>
 
             {/* Resultado Real por Vendedor */}
-            <motion.div {...fadeUp(0.3)} className="bg-white rounded-xl border border-[#E5E7EB]">
-              <div className="px-6 py-4 border-b border-[#F3F4F6]">
-                <h3 className="text-sm font-semibold text-[#111827]">Resultado Real por Vendedor</h3>
-                <p className="text-[10px] text-[#9CA3AF] mt-0.5">Quanto cada vendedor vendeu, margem e comissão</p>
+            <motion.div {...fadeUp(0.3)} className="bg-card rounded-xl border border-border">
+              <div className="px-6 py-4 border-b border-border/50">
+                <h3 className="text-sm font-semibold text-foreground">Resultado Real por Vendedor</h3>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Quanto cada vendedor vendeu, margem e comissão</p>
               </div>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-[#F3F4F6]">
-                    <th className="text-left px-6 py-3 text-[10px] font-medium text-[#9CA3AF] uppercase">#</th>
-                    <th className="text-left px-4 py-3 text-[10px] font-medium text-[#9CA3AF] uppercase">Vendedor</th>
-                    <th className="text-right px-4 py-3 text-[10px] font-medium text-[#9CA3AF] uppercase">Faturamento</th>
-                    <th className="text-right px-4 py-3 text-[10px] font-medium text-[#9CA3AF] uppercase">Margem Bruta</th>
-                    <th className="text-right px-4 py-3 text-[10px] font-medium text-[#9CA3AF] uppercase">Comissão</th>
-                    <th className="text-right px-6 py-3 text-[10px] font-medium text-[#9CA3AF] uppercase">Resultado</th>
+                  <tr className="border-b border-border/50">
+                    <th className="text-left px-6 py-3 text-[10px] font-medium text-muted-foreground uppercase">#</th>
+                    <th className="text-left px-4 py-3 text-[10px] font-medium text-muted-foreground uppercase">Vendedor</th>
+                    <th className="text-right px-4 py-3 text-[10px] font-medium text-muted-foreground uppercase">Faturamento</th>
+                    <th className="text-right px-4 py-3 text-[10px] font-medium text-muted-foreground uppercase">Margem Bruta</th>
+                    <th className="text-right px-4 py-3 text-[10px] font-medium text-muted-foreground uppercase">Comissão</th>
+                    <th className="text-right px-6 py-3 text-[10px] font-medium text-muted-foreground uppercase">Resultado</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#F9FAFB]">
+                <tbody className="divide-y divide-border/50">
                   {sellersResult.filter(s => s.revenue > 0).map((s, i) => {
                     const resultado = s.revenue - (s.revenue * (100 - s.marginBruta) / 100) - s.comissaoReal
                     return (
-                      <tr key={s.id} className="hover:bg-[#FAFAF9] transition-colors">
-                        <td className="px-6 py-3 text-[#9CA3AF] text-xs">{i + 1}.</td>
-                        <td className="px-4 py-3 font-medium text-[#111827]">{s.name}</td>
-                        <td className="px-4 py-3 text-right tabular-nums text-[#374151]">{fmt(s.revenue)}</td>
+                      <tr key={s.id} className="hover:bg-muted/50 transition-colors">
+                        <td className="px-6 py-3 text-muted-foreground text-xs">{i + 1}.</td>
+                        <td className="px-4 py-3 font-medium text-foreground">{s.name}</td>
+                        <td className="px-4 py-3 text-right tabular-nums text-foreground/80">{fmt(s.revenue)}</td>
                         <td className={`px-4 py-3 text-right tabular-nums font-semibold ${s.marginBruta >= 30 ? 'text-emerald-600' : 'text-amber-600'}`}>{s.marginBruta.toFixed(1)}%</td>
-                        <td className="px-4 py-3 text-right tabular-nums text-[#374151]">{fmt(s.comissaoReal)}</td>
+                        <td className="px-4 py-3 text-right tabular-nums text-foreground/80">{fmt(s.comissaoReal)}</td>
                         <td className={`px-6 py-3 text-right tabular-nums font-bold ${resultado >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{fmt(resultado)}</td>
                       </tr>
                     )
@@ -321,23 +321,23 @@ function ComercialTab({ data, month, year }: { data: ReturnType<typeof useGestor
 
         {/* Fila Comercial */}
         <TabsContent value="fila">
-          <div className="bg-white rounded-xl border border-[#E5E7EB] mt-4">
-            <div className="px-6 py-4 border-b border-[#F3F4F6] flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-[#111827]">Fila Comercial — Top 20</h3>
-              <span className="text-[10px] text-[#9CA3AF]">Ordenado por priority_score</span>
+          <div className="bg-card rounded-xl border border-border mt-4">
+            <div className="px-6 py-4 border-b border-border/50 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-foreground">Fila Comercial — Top 20</h3>
+              <span className="text-[10px] text-muted-foreground">Ordenado por priority_score</span>
             </div>
             {priorityClients.length === 0 ? (
-              <p className="py-12 text-center text-sm text-[#9CA3AF]">Nenhum cliente com score de prioridade</p>
+              <p className="py-12 text-center text-sm text-muted-foreground">Nenhum cliente com score de prioridade</p>
             ) : (
-              <div className="divide-y divide-[#F3F4F6]">
+              <div className="divide-y divide-border/50">
                 {priorityClients.map((c, i) => (
-                  <div key={c.id} className="px-6 py-3 flex items-center gap-3 hover:bg-[#FAFAF9] transition-colors">
-                    <span className="w-6 h-6 rounded-full bg-[#F3F4F6] flex items-center justify-center text-[10px] font-bold text-[#6B7280]">{i + 1}</span>
-                    <span className="text-sm text-[#111827] flex-1 truncate">{c.name}</span>
-                    <div className="w-11 h-7 rounded-md bg-[#3B5BDB] flex items-center justify-center shrink-0">
+                  <div key={c.id} className="px-6 py-3 flex items-center gap-3 hover:bg-muted/50 transition-colors">
+                    <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground">{i + 1}</span>
+                    <span className="text-sm text-foreground flex-1 truncate">{c.name}</span>
+                    <div className="w-11 h-7 rounded-md bg-primary flex items-center justify-center shrink-0">
                       <span className="text-[11px] font-bold text-white tabular-nums">{Math.round(c.priority_score ?? 0)}</span>
                     </div>
-                    <span className="text-xs text-[#9CA3AF] tabular-nums w-24 text-right">{fmt(c.total_revenue ?? 0)}</span>
+                    <span className="text-xs text-muted-foreground tabular-nums w-24 text-right">{fmt(c.total_revenue ?? 0)}</span>
                   </div>
                 ))}
               </div>
@@ -347,44 +347,44 @@ function ComercialTab({ data, month, year }: { data: ReturnType<typeof useGestor
 
         {/* Top Clientes */}
         <TabsContent value="clientes">
-          <div className="bg-white rounded-xl border border-[#E5E7EB] mt-4">
-            <div className="px-6 py-4 border-b border-[#F3F4F6]">
-              <h3 className="text-sm font-semibold text-[#111827]">Top 20 Clientes no Período</h3>
-              <p className="text-[10px] text-[#9CA3AF] mt-0.5">Receita acumulada no mês selecionado</p>
+          <div className="bg-card rounded-xl border border-border mt-4">
+            <div className="px-6 py-4 border-b border-border/50">
+              <h3 className="text-sm font-semibold text-foreground">Top 20 Clientes no Período</h3>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Receita acumulada no mês selecionado</p>
             </div>
-            <div className="divide-y divide-[#F3F4F6]">
+            <div className="divide-y divide-border/50">
               {topClients.map((c, i) => (
-                <div key={c.id} className="px-6 py-3 flex items-center gap-3 hover:bg-[#FAFAF9] transition-colors">
+                <div key={c.id} className="px-6 py-3 flex items-center gap-3 hover:bg-muted/50 transition-colors">
                   <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                    i === 0 ? 'bg-[#EEF2FF] text-[#3B5BDB]' : i < 3 ? 'bg-amber-50 text-amber-700' : 'bg-[#F3F4F6] text-[#9CA3AF]'
+                    i === 0 ? 'bg-primary/10 text-primary' : i < 3 ? 'bg-amber-50 text-amber-700' : 'bg-muted text-muted-foreground'
                   }`}>{i + 1}</span>
-                  <span className="text-sm text-[#111827] flex-1 truncate">{c.name}</span>
-                  <span className="text-sm font-semibold text-[#111827] tabular-nums">{fmt(c.revenue)}</span>
+                  <span className="text-sm text-foreground flex-1 truncate">{c.name}</span>
+                  <span className="text-sm font-semibold text-foreground tabular-nums">{fmt(c.revenue)}</span>
                 </div>
               ))}
-              {topClients.length === 0 && <p className="py-12 text-center text-sm text-[#9CA3AF]">Sem vendas no período</p>}
+              {topClients.length === 0 && <p className="py-12 text-center text-sm text-muted-foreground">Sem vendas no período</p>}
             </div>
           </div>
         </TabsContent>
 
         {/* Metas */}
         <TabsContent value="metas">
-          <div className="bg-white rounded-xl border border-[#E5E7EB] p-6 mt-4">
-            <h3 className="text-sm font-semibold text-[#111827] mb-4">Metas do Mês — {MONTHS[month]}/{year}</h3>
+          <div className="bg-card rounded-xl border border-border p-6 mt-4">
+            <h3 className="text-sm font-semibold text-foreground mb-4">Metas do Mês — {MONTHS[month]}/{year}</h3>
             {goals.length === 0 ? (
-              <p className="text-sm text-[#9CA3AF] text-center py-12">Nenhuma meta configurada</p>
+              <p className="text-sm text-muted-foreground text-center py-12">Nenhuma meta configurada</p>
             ) : (
               <div className="space-y-4">
                 {sellersResult.filter(s => s.salesTarget > 0).map(s => (
                   <div key={s.id} className="flex items-center gap-4">
-                    <span className="text-sm font-medium text-[#111827] w-36 truncate">{s.name}</span>
+                    <span className="text-sm font-medium text-foreground w-36 truncate">{s.name}</span>
                     <div className="flex-1">
-                      <Progress value={s.goalPercent} className={`h-3 rounded-lg ${s.goalPercent >= 100 ? '[&>div]:bg-emerald-500' : s.goalPercent >= 70 ? '[&>div]:bg-[#3B5BDB]' : '[&>div]:bg-amber-500'}`} />
+                      <Progress value={s.goalPercent} className={`h-3 rounded-lg ${s.goalPercent >= 100 ? '[&>div]:bg-emerald-500' : s.goalPercent >= 70 ? '[&>div]:bg-primary' : '[&>div]:bg-amber-500'}`} />
                     </div>
                     <div className="text-right w-48 shrink-0">
-                      <span className="text-sm font-semibold text-[#111827] tabular-nums">{fmt(s.revenue)}</span>
-                      <span className="text-xs text-[#9CA3AF]"> / {fmt(s.salesTarget)}</span>
-                      <span className={`ml-2 text-xs font-bold ${s.goalPercent >= 100 ? 'text-emerald-600' : 'text-[#6B7280]'}`}>{Math.round(s.goalPercent)}%</span>
+                      <span className="text-sm font-semibold text-foreground tabular-nums">{fmt(s.revenue)}</span>
+                      <span className="text-xs text-muted-foreground"> / {fmt(s.salesTarget)}</span>
+                      <span className={`ml-2 text-xs font-bold ${s.goalPercent >= 100 ? 'text-emerald-600' : 'text-muted-foreground'}`}>{Math.round(s.goalPercent)}%</span>
                     </div>
                   </div>
                 ))}
@@ -395,10 +395,10 @@ function ComercialTab({ data, month, year }: { data: ReturnType<typeof useGestor
 
         {/* Vendas Diárias */}
         <TabsContent value="diario">
-          <div className="bg-white rounded-xl border border-[#E5E7EB] p-6 mt-4">
-            <h3 className="text-sm font-semibold text-[#111827] mb-5">Vendas por Dia</h3>
+          <div className="bg-card rounded-xl border border-border p-6 mt-4">
+            <h3 className="text-sm font-semibold text-foreground mb-5">Vendas por Dia</h3>
             {dailyEntries.length === 0 ? (
-              <p className="text-sm text-[#9CA3AF] text-center py-12">Sem vendas no período</p>
+              <p className="text-sm text-muted-foreground text-center py-12">Sem vendas no período</p>
             ) : (
               <div className="space-y-2">
                 {dailyEntries.map(([day, total], i) => {
@@ -406,15 +406,15 @@ function ComercialTab({ data, month, year }: { data: ReturnType<typeof useGestor
                   const pct = max > 0 ? (total / max) * 100 : 0
                   return (
                     <motion.div key={day} {...fadeUp(i * 0.03)} className="flex items-center gap-3 group">
-                      <span className="text-xs text-[#6B7280] w-14 shrink-0 tabular-nums">
+                      <span className="text-xs text-muted-foreground w-14 shrink-0 tabular-nums">
                         {new Date(day + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
                       </span>
-                      <div className="flex-1 h-7 bg-[#F3F4F6] rounded-lg overflow-hidden">
+                      <div className="flex-1 h-7 bg-muted rounded-lg overflow-hidden">
                         <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
                           transition={{ duration: 0.6, delay: i * 0.03, ease: 'easeOut' }}
-                          className="h-full bg-[#3B5BDB] rounded-lg group-hover:bg-[#3451C7] transition-colors" />
+                          className="h-full bg-primary rounded-lg group-hover:bg-primary/90 transition-colors" />
                       </div>
-                      <span className="text-xs font-medium text-[#111827] w-24 text-right tabular-nums">{fmt(total)}</span>
+                      <span className="text-xs font-medium text-foreground w-24 text-right tabular-nums">{fmt(total)}</span>
                     </motion.div>
                   )
                 })}
@@ -425,29 +425,29 @@ function ComercialTab({ data, month, year }: { data: ReturnType<typeof useGestor
 
         {/* Inativos */}
         <TabsContent value="inativos">
-          <div className="bg-white rounded-xl border border-[#E5E7EB] mt-4">
-            <div className="px-6 py-4 border-b border-[#F3F4F6] flex items-center justify-between">
+          <div className="bg-card rounded-xl border border-border mt-4">
+            <div className="px-6 py-4 border-b border-border/50 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center">
                   <AlertTriangle size={14} className="text-red-500" />
                 </div>
-                <h3 className="text-sm font-semibold text-[#111827]">Inativos ({inactiveClients.length})</h3>
+                <h3 className="text-sm font-semibold text-foreground">Inativos ({inactiveClients.length})</h3>
               </div>
-              <span className="text-[10px] text-[#9CA3AF]">Sem pedido há 60+ dias</span>
+              <span className="text-[10px] text-muted-foreground">Sem pedido há 60+ dias</span>
             </div>
             {inactiveClients.length === 0 ? (
-              <p className="py-12 text-center text-sm text-[#9CA3AF]">Nenhum cliente inativo</p>
+              <p className="py-12 text-center text-sm text-muted-foreground">Nenhum cliente inativo</p>
             ) : (
-              <div className="divide-y divide-[#F3F4F6] max-h-[500px] overflow-y-auto">
+              <div className="divide-y divide-border/50 max-h-[500px] overflow-y-auto">
                 {inactiveClients.slice(0, 50).map((c) => {
                   const days = c.last_order_at
                     ? Math.floor((Date.now() - new Date(String(c.last_order_at).replace(' ', 'T')).getTime()) / 86_400_000)
                     : null
                   return (
-                    <div key={c.id} className="px-6 py-3.5 flex items-center gap-3 hover:bg-[#FAFAF9] transition-colors">
+                    <div key={c.id} className="px-6 py-3.5 flex items-center gap-3 hover:bg-muted/50 transition-colors">
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-[#111827] truncate">{c.name}</p>
-                        <p className="text-[11px] text-[#9CA3AF] mt-0.5">
+                        <p className="text-sm font-medium text-foreground truncate">{c.name}</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
                           {c.last_order_at ? `Último: ${new Date(String(c.last_order_at).replace(' ', 'T')).toLocaleDateString('pt-BR')}` : 'Nunca comprou'}
                         </p>
                       </div>
@@ -459,7 +459,7 @@ function ComercialTab({ data, month, year }: { data: ReturnType<typeof useGestor
                           <span className="text-[11px] font-semibold tabular-nums">{days}d</span>
                         </div>
                       )}
-                      <span className="text-sm font-semibold text-[#111827] tabular-nums shrink-0">{fmt(c.total_revenue ?? 0)}</span>
+                      <span className="text-sm font-semibold text-foreground tabular-nums shrink-0">{fmt(c.total_revenue ?? 0)}</span>
                     </div>
                   )
                 })}
@@ -492,23 +492,23 @@ function OperacionalTab({ data }: { data: ReturnType<typeof useGestorData> }) {
   return (
     <div className="space-y-6">
       <motion.div {...fadeUp(0)} className="space-y-1">
-        <h2 className="text-lg font-semibold text-[#111827]">Operacional</h2>
-        <p className="text-sm text-[#9CA3AF]">Performance, rankings e alertas de gestão</p>
+        <h2 className="text-lg font-semibold text-foreground">Operacional</h2>
+        <p className="text-sm text-muted-foreground">Performance, rankings e alertas de gestão</p>
       </motion.div>
 
       {/* Summary cards */}
       <div className="grid grid-cols-4 gap-4">
         {[
-          { label: 'Vendedores Ativos', value: String(activeSellers.length), icon: Users, bg: 'bg-[#EEF2FF]', color: 'text-[#3B5BDB]' },
+          { label: 'Vendedores Ativos', value: String(activeSellers.length), icon: Users, bg: 'bg-primary/10', color: 'text-primary' },
           { label: 'Pedidos no Mês', value: String(kpis.ordersCount), icon: ShoppingCart, bg: 'bg-emerald-50', color: 'text-emerald-600' },
           { label: 'Ticket Médio', value: fmt(kpis.avgTicket), icon: DollarSign, bg: 'bg-amber-50', color: 'text-amber-600' },
           { label: 'NF-e Emitidas', value: String(kpis.invoicedCount), icon: Package, bg: 'bg-violet-50', color: 'text-violet-600' },
         ].map((c, i) => (
           <motion.div key={c.label} {...fadeUp(i * 0.05)}
-            className="bg-white rounded-xl border border-[#E5E7EB] p-5 flex items-center justify-between">
+            className="bg-card rounded-xl border border-border p-5 flex items-center justify-between">
             <div>
-              <p className="text-[11px] text-[#9CA3AF] font-medium uppercase tracking-wide">{c.label}</p>
-              <p className="text-2xl font-semibold text-[#111827] mt-1.5 tabular-nums">{c.value}</p>
+              <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">{c.label}</p>
+              <p className="text-2xl font-semibold text-foreground mt-1.5 tabular-nums">{c.value}</p>
             </div>
             <div className={`w-10 h-10 rounded-xl ${c.bg} flex items-center justify-center`}>
               <c.icon size={18} className={c.color} strokeWidth={1.75} />
@@ -519,8 +519,8 @@ function OperacionalTab({ data }: { data: ReturnType<typeof useGestorData> }) {
 
       {/* Top Performers — 3 rankings */}
       <motion.div {...fadeUp(0.15)}>
-        <h3 className="text-sm font-semibold text-[#111827] mb-3 flex items-center gap-2">
-          <Target size={14} className="text-[#3B5BDB]" /> Top Performers
+        <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+          <Target size={14} className="text-primary" /> Top Performers
         </h3>
         <div className="grid grid-cols-3 gap-4">
           {[
@@ -528,16 +528,16 @@ function OperacionalTab({ data }: { data: ReturnType<typeof useGestorData> }) {
             { title: 'Margem', data: byMargin.slice(0, 3), render: (s: typeof byMargin[0]) => `${s.marginBruta.toFixed(1)}%` },
             { title: 'Clientes', data: byClients.slice(0, 3), render: (s: typeof byClients[0]) => String(s.clientsCount) },
           ].map(r => (
-            <div key={r.title} className="bg-white rounded-xl border border-[#E5E7EB] p-4">
-              <p className="text-[10px] text-[#9CA3AF] font-medium uppercase tracking-wide mb-3">{r.title}</p>
+            <div key={r.title} className="bg-card rounded-xl border border-border p-4">
+              <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mb-3">{r.title}</p>
               <div className="space-y-2.5">
                 {r.data.map((s, i) => (
                   <div key={s.id} className="flex items-center gap-2">
                     <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${
-                      i === 0 ? 'bg-amber-100 text-amber-700' : i === 1 ? 'bg-[#F3F4F6] text-[#6B7280]' : 'bg-orange-50 text-orange-600'
+                      i === 0 ? 'bg-amber-100 text-amber-700' : i === 1 ? 'bg-muted text-muted-foreground' : 'bg-orange-50 text-orange-600'
                     }`}>{i + 1}</span>
-                    <span className="text-sm text-[#111827] flex-1 truncate">{s.name}</span>
-                    <span className="text-sm font-semibold text-[#111827] tabular-nums">{r.render(s)}</span>
+                    <span className="text-sm text-foreground flex-1 truncate">{s.name}</span>
+                    <span className="text-sm font-semibold text-foreground tabular-nums">{r.render(s)}</span>
                   </div>
                 ))}
               </div>
@@ -549,7 +549,7 @@ function OperacionalTab({ data }: { data: ReturnType<typeof useGestorData> }) {
       {/* Alertas de Gestão */}
       {(lowMargin.length > 0 || noGoal.length > 0) && (
         <motion.div {...fadeUp(0.2)} className="space-y-2">
-          <h3 className="text-sm font-semibold text-[#111827] flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
             <AlertTriangle size={14} className="text-amber-500" /> Alertas de Gestão
           </h3>
           {lowMargin.length > 0 && (
@@ -572,38 +572,38 @@ function OperacionalTab({ data }: { data: ReturnType<typeof useGestorData> }) {
       )}
 
       {/* Performance table */}
-      <motion.div {...fadeUp(0.25)} className="bg-white rounded-xl border border-[#E5E7EB]">
-        <div className="px-6 py-4 border-b border-[#F3F4F6]">
-          <h3 className="text-sm font-semibold text-[#111827]">Performance por Vendedor</h3>
+      <motion.div {...fadeUp(0.25)} className="bg-card rounded-xl border border-border">
+        <div className="px-6 py-4 border-b border-border/50">
+          <h3 className="text-sm font-semibold text-foreground">Performance por Vendedor</h3>
         </div>
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[#F3F4F6]">
-              <th className="text-left px-6 py-3 text-[10px] font-medium text-[#9CA3AF] uppercase">Vendedor</th>
-              <th className="text-right px-4 py-3 text-[10px] font-medium text-[#9CA3AF] uppercase">Pedidos</th>
-              <th className="text-right px-4 py-3 text-[10px] font-medium text-[#9CA3AF] uppercase">Faturamento</th>
-              <th className="text-right px-4 py-3 text-[10px] font-medium text-[#9CA3AF] uppercase">Ticket Médio</th>
-              <th className="text-right px-4 py-3 text-[10px] font-medium text-[#9CA3AF] uppercase">Clientes</th>
-              <th className="text-right px-4 py-3 text-[10px] font-medium text-[#9CA3AF] uppercase">Margem %</th>
-              <th className="px-6 py-3 text-[10px] font-medium text-[#9CA3AF] uppercase w-24">% Meta</th>
+            <tr className="border-b border-border/50">
+              <th className="text-left px-6 py-3 text-[10px] font-medium text-muted-foreground uppercase">Vendedor</th>
+              <th className="text-right px-4 py-3 text-[10px] font-medium text-muted-foreground uppercase">Pedidos</th>
+              <th className="text-right px-4 py-3 text-[10px] font-medium text-muted-foreground uppercase">Faturamento</th>
+              <th className="text-right px-4 py-3 text-[10px] font-medium text-muted-foreground uppercase">Ticket Médio</th>
+              <th className="text-right px-4 py-3 text-[10px] font-medium text-muted-foreground uppercase">Clientes</th>
+              <th className="text-right px-4 py-3 text-[10px] font-medium text-muted-foreground uppercase">Margem %</th>
+              <th className="px-6 py-3 text-[10px] font-medium text-muted-foreground uppercase w-24">% Meta</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#F9FAFB]">
+          <tbody className="divide-y divide-border/50">
             {activeSellers.map(s => (
-              <tr key={s.id} className="hover:bg-[#FAFAF9] transition-colors">
-                <td className="px-6 py-3 font-medium text-[#111827]">{s.name}</td>
-                <td className="px-4 py-3 text-right tabular-nums text-[#374151]">{s.ordersCount}</td>
-                <td className="px-4 py-3 text-right tabular-nums font-medium text-[#111827]">{fmt(s.revenue)}</td>
-                <td className="px-4 py-3 text-right tabular-nums text-[#374151]">{fmt(s.avgTicket)}</td>
-                <td className="px-4 py-3 text-right tabular-nums text-[#374151]">{s.clientsCount}</td>
+              <tr key={s.id} className="hover:bg-muted/50 transition-colors">
+                <td className="px-6 py-3 font-medium text-foreground">{s.name}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-foreground/80">{s.ordersCount}</td>
+                <td className="px-4 py-3 text-right tabular-nums font-medium text-foreground">{fmt(s.revenue)}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-foreground/80">{fmt(s.avgTicket)}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-foreground/80">{s.clientsCount}</td>
                 <td className={`px-4 py-3 text-right tabular-nums font-semibold ${s.marginBruta >= 30 ? 'text-emerald-600' : s.marginBruta >= 15 ? 'text-amber-600' : 'text-red-600'}`}>{s.marginBruta.toFixed(1)}%</td>
                 <td className="px-6 py-3">
                   {s.salesTarget > 0 ? (
                     <div className="flex items-center gap-1.5">
-                      <Progress value={s.goalPercent} className="flex-1 h-1.5 [&>div]:bg-[#3B5BDB]" />
-                      <span className="text-[10px] text-[#6B7280] tabular-nums">{Math.round(s.goalPercent)}%</span>
+                      <Progress value={s.goalPercent} className="flex-1 h-1.5 [&>div]:bg-primary" />
+                      <span className="text-[10px] text-muted-foreground tabular-nums">{Math.round(s.goalPercent)}%</span>
                     </div>
-                  ) : <span className="text-[10px] text-[#D1D5DB]">—</span>}
+                  ) : <span className="text-[10px] text-muted-foreground/50">—</span>}
                 </td>
               </tr>
             ))}
@@ -621,15 +621,15 @@ function OperacionalTab({ data }: { data: ReturnType<typeof useGestorData> }) {
 function EstrategicoTab() {
   return (
     <motion.div {...fadeUp(0)}
-      className="bg-white rounded-xl border border-[#E5E7EB] p-12 flex flex-col items-center justify-center text-center">
-      <div className="w-16 h-16 rounded-2xl bg-[#EEF2FF] flex items-center justify-center mb-4">
-        <TrendingUp size={28} className="text-[#3B5BDB]" strokeWidth={1.5} />
+      className="bg-card rounded-xl border border-border p-12 flex flex-col items-center justify-center text-center">
+      <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+        <TrendingUp size={28} className="text-primary" strokeWidth={1.5} />
       </div>
-      <h3 className="text-lg font-semibold text-[#111827] mb-2">Estratégico</h3>
-      <p className="text-sm text-[#9CA3AF] max-w-md">
+      <h3 className="text-lg font-semibold text-foreground mb-2">Estratégico</h3>
+      <p className="text-sm text-muted-foreground max-w-md">
         Simulações, projeções e análises estratégicas. Este módulo será construído na próxima fase do sistema.
       </p>
-      <div className="mt-4 flex items-center gap-1.5 text-[11px] text-[#3B5BDB] font-medium bg-[#EEF2FF] px-3 py-1.5 rounded-full">
+      <div className="mt-4 flex items-center gap-1.5 text-[11px] text-primary font-medium bg-primary/10 px-3 py-1.5 rounded-full">
         <ArrowUpRight size={12} />
         Em breve
       </div>
@@ -699,13 +699,13 @@ FINANCEIRO:
     <div className="space-y-6">
       <motion.div {...fadeUp(0)} className="flex items-center justify-between">
         <div className="space-y-1">
-          <h2 className="text-lg font-semibold text-[#111827] flex items-center gap-2">
-            <Bot size={18} className="text-[#3B5BDB]" />
+          <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+            <Bot size={18} className="text-primary" />
             Agente Estratégico IA
           </h2>
-          <p className="text-sm text-[#9CA3AF]">Análise global com acesso a todos os dados do período</p>
+          <p className="text-sm text-muted-foreground">Análise global com acesso a todos os dados do período</p>
         </div>
-        <div className="text-[11px] text-[#6B7280] bg-[#F3F4F6] px-3 py-1.5 rounded-lg capitalize">
+        <div className="text-[11px] text-muted-foreground bg-muted px-3 py-1.5 rounded-lg capitalize">
           {periodLabel}
         </div>
       </motion.div>
@@ -713,37 +713,37 @@ FINANCEIRO:
       {/* Actions */}
       <motion.div {...fadeUp(0.05)} className="flex gap-3">
         <button onClick={generateReport} disabled={loading}
-          className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium bg-[#3B5BDB] text-white rounded-lg hover:bg-[#3451C7] disabled:opacity-50 transition-colors">
+          className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors">
           {loading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
           {loading ? 'Gerando...' : 'Rodar Diagnóstico Estratégico'}
         </button>
       </motion.div>
 
       {/* Context */}
-      <motion.div {...fadeUp(0.1)} className="bg-white rounded-xl border border-[#E5E7EB]">
+      <motion.div {...fadeUp(0.1)} className="bg-card rounded-xl border border-border">
         <button onClick={() => setExpanded(p => !p)}
-          className="w-full px-6 py-4 flex items-center justify-between text-sm font-medium text-[#6B7280] hover:bg-[#FAFAF9] transition-colors rounded-xl">
+          className="w-full px-6 py-4 flex items-center justify-between text-sm font-medium text-muted-foreground hover:bg-muted/50 transition-colors rounded-xl">
           <span className="flex items-center gap-2">
-            <Package size={14} className="text-[#9CA3AF]" /> Dados enviados para IA
+            <Package size={14} className="text-muted-foreground" /> Dados enviados para IA
           </span>
           {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </button>
         {expanded && (
           <div className="px-6 pb-5">
-            <pre className="text-xs text-[#6B7280] bg-[#F9FAFB] rounded-lg p-4 overflow-x-auto whitespace-pre-wrap border border-[#F3F4F6]">{context}</pre>
+            <pre className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-4 overflow-x-auto whitespace-pre-wrap border border-border/50">{context}</pre>
           </div>
         )}
       </motion.div>
 
       {/* Custom question */}
-      <motion.div {...fadeUp(0.15)} className="bg-white rounded-xl border border-[#E5E7EB] p-6">
+      <motion.div {...fadeUp(0.15)} className="bg-card rounded-xl border border-border p-6">
         <div className="flex gap-3">
           <input type="text" value={customPrompt} onChange={e => setCustomPrompt(e.target.value)}
             placeholder="Pergunte algo específico ou deixe em branco para diagnóstico completo..."
             onKeyDown={e => e.key === 'Enter' && generateReport()}
-            className="flex-1 text-sm border border-[#E5E7EB] rounded-lg px-3 py-2.5 text-[#111827] placeholder-[#9CA3AF] outline-none focus:border-[#3B5BDB] focus:ring-2 focus:ring-[#3B5BDB]/20 transition bg-white" />
+            className="flex-1 text-sm border border-border rounded-lg px-3 py-2.5 text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition bg-card" />
           <button onClick={generateReport} disabled={loading}
-            className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium bg-[#111827] text-white rounded-lg hover:bg-[#374151] disabled:opacity-50 transition-colors">
+            className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium bg-foreground text-white rounded-lg hover:bg-foreground/80 disabled:opacity-50 transition-colors">
             <Send size={14} />
           </button>
         </div>
@@ -752,12 +752,12 @@ FINANCEIRO:
       {/* Report */}
       {report && (
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl border border-[#E5E7EB] p-6">
-          <h3 className="text-sm font-semibold text-[#111827] mb-3 flex items-center gap-2">
-            <Bot size={14} className="text-[#3B5BDB]" />
+          className="bg-card rounded-xl border border-border p-6">
+          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+            <Bot size={14} className="text-primary" />
             Resultado
           </h3>
-          <div className="prose prose-sm max-w-none text-[#374151] whitespace-pre-wrap leading-relaxed">{report}</div>
+          <div className="prose prose-sm max-w-none text-foreground/80 whitespace-pre-wrap leading-relaxed">{report}</div>
         </motion.div>
       )}
     </div>
