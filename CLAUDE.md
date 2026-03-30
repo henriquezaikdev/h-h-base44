@@ -190,3 +190,29 @@ Instrução: antes de entregar qualquer componente novo ou modificado, revisar e
 
 ## FINALIZAÇÃO DE SESSÃO OBRIGATÓRIA
 Ao receber comando "finalizar", atualizar CONTEXT/CORE.md com STATUS ATUAL (data, último concluído, em andamento, próximo passo) e CONTEXT/BANCO.md se houver mudanças estruturais.
+
+## Skills Globais Instaladas
+
+As seguintes skills estão instaladas globalmente (~/.agents/skills/) e devem ser sugeridas e utilizadas automaticamente quando relevantes:
+
+### 🎨 Design & Frontend
+- **frontend-design** — Use sempre que criar ou refatorar componentes de UI. Evita estética genérica. Aciona automaticamente em tarefas de interface.
+- **normalize** — Use para alinhar qualquer tela ao design system do projeto. Comando: peça "normalize este componente".
+- **ui-ux-pro-max** — Use para gerar design system, paletas, tipografia e regras UX. Comando: `python3 skills/ui-ux-pro-max/scripts/search.py "<produto>" --design-system`
+- **web-design-guidelines** — Use para auditar arquivos de UI. Comando: aponte um arquivo e peça auditoria.
+- **shadcn** — Use sempre que trabalhar com componentes shadcn/ui. Aciona automaticamente.
+
+### 🗄️ Banco de Dados
+- **supabase-postgres-best-practices** — Use sempre que escrever queries SQL, criar tabelas, configurar RLS ou otimizar o banco. Aciona automaticamente.
+
+### 🔧 Desenvolvimento
+- **superpowers** — Framework completo com TDD, debugging, brainstorming e code review. Comandos: `/brainstorming`, `/write-plan`, `/execute-plan`
+- **verification-before-completion** — Aciona automaticamente. Nunca declare tarefa concluída sem evidência real.
+- **find-skills** — Use quando precisar de uma skill nova. Comando: "encontre uma skill para X"
+- **mcp-builder** — Use quando for construir integrações MCP (Conta Azul, Entregador Online, etc.)
+
+### 📄 Documentos
+- **docx** — Use para criar ou editar arquivos Word (.docx).
+
+### 📋 Regra Geral
+Antes de implementar qualquer feature, verifique se existe uma skill relevante. Se existir, use-a. Sugira o uso da skill adequada sempre que identificar uma oportunidade.
