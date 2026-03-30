@@ -417,6 +417,42 @@ Os hooks usam as colunas CRM (status_crm, priority_crm, task_date, etc.)
 
 ---
 
+## CONFIGURAÇÕES
+
+### app_config
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| key | text |
+| value | text |
+| created_at | timestamptz |
+| updated_at | timestamptz |
+| UNIQUE | (company_id, key) |
+
+Keys em uso: empresa_nome, empresa_cnpj, empresa_telefone, empresa_endereco, logo_url, reativacao_meta_mensal
+
+### monthly_goals
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| seller_id | uuid (fk → sellers) |
+| month | integer |
+| year | integer |
+| sales_target | numeric default 0 |
+| sales_achieved | numeric default 0 |
+| calls_target | integer default 0 |
+| call_attempts_target | integer default 0 |
+| whatsapp_response_target | integer default 0 |
+| whatsapp_no_response_target | integer default 0 |
+| scope | text default 'individual' |
+| created_at | timestamptz |
+| updated_at | timestamptz |
+| UNIQUE | (company_id, seller_id, month, year) |
+
+---
+
 ## GAMIFICAÇÃO E EVOLUÇÃO
 
 ### seller_levels

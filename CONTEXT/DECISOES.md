@@ -424,3 +424,27 @@ Esse contexto é importante para entender por que certas decisões de arquitetur
 - 6 componentes em src/components/inativos/: CardInativo, PainelGuerra, BarraMeta, FilaReativacao, SecaoJanelaLonga, ViewModeToggle, CarteiraEmRisco
 - Página orquestradora: src/pages/ClientesInativos.tsx
 - Página processo: src/pages/ReativacaoCliente.tsx
+
+## BLOCO 2 — CONFIGURAÇÕES (30/03/2026)
+
+### app_config — schema key/value
+- Schema key/value adotado (não colunas fixas) — mais flexível para configurações futuras
+- Cada configuração é uma linha com key + value (ambos text)
+- upsert via onConflict em 'company_id,key'
+
+### Permissões por role (fixas no frontend)
+- owner: acesso total
+- admin: acesso total incluindo Configurações
+- seller: Clientes, Pedidos, Produtos, Compras, Estoque, Tarefas, Mural — SEM Financeiro e SEM Configurações
+- logistics: Estoque, Entregas, Tarefas, Mural
+- entregas: apenas dashboard do entregador
+- Não existe tabela de permissões — regras são hardcoded no roteamento e sidebar
+
+### Edge Functions do Bloco 2
+- invite-user: cria usuário no Auth + insere em sellers, rollback automático se insert falhar
+- reset-user-password: atualiza senha via admin API, retorna senha temporária
+- Ambas com verify_jwt = false e service role key
+
+### Supabase Storage
+- Bucket 'logos' criado (público) para upload de logo da empresa
+- Path padrão: {company_id}/logo.{ext}

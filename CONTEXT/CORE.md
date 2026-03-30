@@ -94,6 +94,10 @@
   - Aba Evolução: EvolutionEmbed (performance, comissão/nível, campanhas, regras)
 - Componentes UI (20 componentes shadcn/ui: Button, Card, Badge, Tabs, Dialog, Avatar, Progress, etc.)
 - QueryClientProvider configurado no App.tsx (TanStack React Query)
+- Configurações (/configuracoes): 3 abas (Geral, Usuários, Metas) — somente owner e admin
+  - Aba Geral: informações da empresa + upload de logo (Supabase Storage bucket 'logos')
+  - Aba Usuários: cards de sellers, editar perfil, reset de senha, ver permissões, inativar/reativar, convidar novo usuário
+  - Aba Metas: metas mensais por vendedor (monthly_goals), meta de reativação (app_config), metas diárias (daily_goals)
 
 ## CONTA AZUL
 - Renovação expira em 14/05/2026 — sistema novo precisa estar operacional antes
@@ -157,35 +161,26 @@ Módulos pendentes:
 - Primeiros clientes externos distribuidoras B2B
 
 ## STATUS ATUAL
-Data: 29/03/2026
+Data: 30/03/2026
 
 Último concluído:
-- Bloco 1 completo: OriginPickerModal (6 origens), badges na listagem, campo origem na ficha
-- Super Tela de Inativos completa (Modo Normal):
-  - ClientesInativos.tsx: fila ranqueada por reativacao_score, 4 métricas, barra de meta, silêncio programado
-  - ReativacaoCliente.tsx: página de processo (stepper, contatos, confirmar/perder, painel contexto)
-  - CarteiraEmRisco.tsx: bloco no VendedorMeuDia (top 3 inativos)
-  - Hooks: useClientesInativos.ts, useReativacao.ts
-  - 6 componentes em src/components/inativos/
-- Edge Functions deployadas: calcular-score-reativacao, classificar-janela-longa
-- SQLs executados: 9 colunas novas em clients (reativacao_*), tabelas client_reativacoes e reativacao_contatos, trigger fn_reativar_cliente_por_pedido
-- Trigger automático: pedido/orçamento criado para cliente inactive → reativação automática + XP
-- Botões Orçamento/Pedido na ReativacaoCliente abrem DocModal com cliente pré-selecionado
-- Commits deployados: 455226f → cdc8f70 (Vercel produção)
+- Bloco 2 — Configurações (/configuracoes) completo (parte 1):
+  - Tabela app_config criada (key/value, RLS ativo, 6 registros iniciais)
+  - Tabela monthly_goals criada (RLS ativo)
+  - Bucket Supabase Storage 'logos' criado (público)
+  - Edge Functions deployadas: invite-user, reset-user-password (verify_jwt = false, com rollback)
+  - Hook useConfiguracoesData.ts criado (useAppConfig, upsertAppConfig, useSellersParaConfig, useMonthlyGoals)
+  - ConfiguracoesPage.tsx: 3 abas funcionando em produção
+  - Rota /configuracoes adicionada, sidebar atualizado (visível para owner)
 
 Em andamento:
-- Modo Interativo da tela de inativos (placeholder funcional — dark theme + animações pendente validação Normal)
+- Modo Interativo da tela de inativos (dark theme + animações) — pendente validação
 
 Próximo passo:
-1. Bloco 2 — Configurações (/configuracoes)
-   - Criar tabela app_config
-   - Deploy Edge Functions: invite-user, reset-user-password
-   - 5 abas: Empresa, Usuários, Metas, Fiscal, Equivalências
+- Bloco 2 parte 2 (S4): Aba Fiscal + Aba Equivalências de Produtos
+- Bloco 3: Tela do Gestor (/gestor)
 
 Observações:
-- framer-motion permitido — sem restrição desde que não sejam infantis
-- "Zero emojis" = zero emojis de WhatsApp/texto — ícones Lucide e elementos visuais premium são obrigatórios
-- ui_mode salvo por seller_id: 'normal' | 'interativo'
-- Cliente janela_longa = true nunca aparece na fila de inativos
-- Cliente origem = 'filial' nunca aparece na fila de inativos
-- KanbanInativosPage.tsx substituído por ClientesInativos.tsx (arquivo antigo pode ser removido)
+- Aba Fiscal e Equivalências explicitamente adiadas para S4
+- app_config usa schema key/value (não colunas fixas) — decisão arquitetural correta
+- Permissões por role são fixas no frontend (sem tabela dedicada): owner=tudo, admin=tudo, seller=sem Financeiro/Config, logistics=Estoque/Entregas/Tarefas/Mural, entregas=só dashboard
