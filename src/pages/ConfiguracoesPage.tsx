@@ -7,7 +7,8 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { useAppConfig, upsertAppConfig, useSellersParaConfig, useMonthlyGoals } from '../hooks/useConfiguracoesData'
+import { useAppConfig, upsertAppConfig, useMonthlyGoals } from '../hooks/useConfiguracoesData'
+import { useSellersData } from '../hooks/useSellersData'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog'
 import { Progress } from '../components/ui/progress'
@@ -208,13 +209,14 @@ function AbaGeral({ notify }: { notify: (ok: boolean, msg: string) => void }) {
    ═══════════════════════════════════════════════════════════════════════════ */
 
 function AbaUsuarios({ notify }: { notify: (ok: boolean, msg: string) => void }) {
-  const { data: sellers, loading, refetch } = useSellersParaConfig()
+  const { sellers: allSellers, loading } = useSellersData()
   const [showInactive, setShowInactive] = useState(false)
+  const refetch = useCallback(() => { /* TanStack auto-refetches */ }, [])
   const [inviteOpen, setInviteOpen] = useState(false)
   const [resetTarget, setResetTarget] = useState<{ id: string; name: string; authId: string | null } | null>(null)
   const [newPassword, setNewPassword] = useState<string | null>(null)
 
-  const list = (sellers ?? []).filter(s => showInactive || s.active)
+  const list = allSellers.filter(s => showInactive || (s.status === 'ATIVO' || s.status === null))
 
   async function handleInvite(data: { name: string; email: string; role: string; department: string; password: string }) {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/invite-user`, {
@@ -269,9 +271,10 @@ function AbaUsuarios({ notify }: { notify: (ok: boolean, msg: string) => void })
         {list.length === 0 ? (
           <p className="py-16 text-center text-sm text-[#9CA3AF]">Nenhum usuário</p>
         ) : list.map(s => {
-          const initials = s.name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
+          const initials = s.name?.split(' ').slice(0, 2).map((w: string) => w?.[0] ?? '').join('').toUpperCase() ?? '?'
           const roleCfg = ROLE_LABELS[s.role] ?? { label: s.role, color: 'bg-[#F3F4F6] text-[#6B7280]' }
           const dept = s.department ? DEPT_LABELS[s.department] ?? s.department : null
+          const ativo = s.status === 'ATIVO' || s.status === null
 
           return (
             <div key={s.id} className="px-5 py-4 flex items-center gap-4">
@@ -296,21 +299,21 @@ function AbaUsuarios({ notify }: { notify: (ok: boolean, msg: string) => void })
 
               {/* Status */}
               <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                s.active ? 'bg-emerald-50 text-emerald-700' : 'bg-[#F3F4F6] text-[#9CA3AF]'
+                ativo ? 'bg-emerald-50 text-emerald-700' : 'bg-[#F3F4F6] text-[#9CA3AF]'
               }`}>
-                {s.active ? 'Ativo' : 'Inativo'}
+                {ativo ? 'Ativo' : 'Inativo'}
               </span>
 
               {/* Actions */}
               <div className="flex items-center gap-1">
-                <button onClick={() => setResetTarget({ id: s.id, name: s.name, authId: s.auth_user_id })}
+                <button onClick={() => setResetTarget({ id: s.id, name: s.name, authId: (s as Record<string, unknown>).auth_user_id as string | null })}
                   title="Resetar senha" className="w-8 h-8 rounded-lg flex items-center justify-center text-[#9CA3AF] hover:text-[#3B5BDB] hover:bg-[#EEF2FF] transition-colors">
                   <KeyRound size={14} />
                 </button>
-                <button onClick={() => toggleActive(s.id, s.active)}
-                  title={s.active ? 'Inativar' : 'Reativar'}
+                <button onClick={() => toggleActive(s.id, ativo)}
+                  title={ativo ? 'Inativar' : 'Reativar'}
                   className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-                    s.active ? 'text-[#9CA3AF] hover:text-red-500 hover:bg-red-50' : 'text-[#9CA3AF] hover:text-emerald-600 hover:bg-emerald-50'
+                    ativo ? 'text-[#9CA3AF] hover:text-red-500 hover:bg-red-50' : 'text-[#9CA3AF] hover:text-emerald-600 hover:bg-emerald-50'
                   }`}>
                   <Shield size={14} />
                 </button>
@@ -473,8 +476,8 @@ function AbaMetas({ notify }: { notify: (ok: boolean, msg: string) => void }) {
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [year, setYear] = useState(now.getFullYear())
   const { data: goals, loading, refetch } = useMonthlyGoals(month, year)
-  const { data: sellers } = useSellersParaConfig()
-  const activeSellers = (sellers ?? []).filter(s => s.active && (s.is_sales_active || s.role === 'seller'))
+  const { sellers: allSellersForMetas } = useSellersData()
+  const activeSellers = allSellersForMetas.filter(s => s.is_sales_active || s.role === 'seller')
 
   const [editGoal, setEditGoal] = useState<{ seller_id: string; seller_name: string; sales_target: string; calls_target: string } | null>(null)
   const [saving, setSaving] = useState(false)
