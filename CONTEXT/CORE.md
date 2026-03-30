@@ -164,14 +164,17 @@ Módulos pendentes:
 Data: 30/03/2026
 
 Último concluído:
-- Bloco 2 — Configurações (/configuracoes) completo (parte 1):
-  - Tabela app_config criada (key/value, RLS ativo, 6 registros iniciais)
-  - Tabela monthly_goals criada (RLS ativo)
-  - Bucket Supabase Storage 'logos' criado (público)
-  - Edge Functions deployadas: invite-user, reset-user-password (verify_jwt = false, com rollback)
-  - Hook useConfiguracoesData.ts criado (useAppConfig, upsertAppConfig, useSellersParaConfig, useMonthlyGoals)
-  - ConfiguracoesPage.tsx: 3 abas funcionando em produção
-  - Rota /configuracoes adicionada, sidebar atualizado (visível para owner)
+- Redesign premium do ProfileHubContent.tsx (aba Perfil do Owner e Vendedor):
+  - Banner gradiente grafite→verde escuro (#0F0F0E → #1A2A1F)
+  - Avatar com ring animado verde-salva (#1A9E78/#2DD4A0)
+  - Ícones Phosphor (bold 18px) substituindo lucide-react no perfil
+  - Cards com hover effects (scale + border transition)
+  - Tabs animadas com indicator sliding
+  - Aba Métricas com barras de progresso e círculo SVG de eficiência
+  - Removido placeholder de gamificação
+- Componentes Aceternity UI instalados: noise-background, floating-dock
+- Pacotes adicionados: motion, @tabler/icons-react
+- Skill frontend-design instalada (.agents/skills/frontend-design)
 
 Em andamento:
 - Modo Interativo da tela de inativos (dark theme + animações) — pendente validação
