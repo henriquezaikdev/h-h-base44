@@ -1,5 +1,7 @@
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useSupabaseQuery } from './useSupabaseQuery'
+import { useAuth } from './useAuth'
 
 const CID = '00000000-0000-0000-0000-000000000001'
 
@@ -29,7 +31,7 @@ export async function upsertAppConfig(key: string, value: string) {
 
 /* ── sellers para config ───────────────────────────────────────────────────── */
 
-interface SellerConfig {
+export interface SellerConfig {
   id: string
   name: string
   email: string
@@ -43,15 +45,23 @@ interface SellerConfig {
 }
 
 export function useSellersParaConfig() {
-  return useSupabaseQuery<SellerConfig[]>(
-    ({ company_id }) =>
-      supabase
+  const { seller } = useAuth()
+  const { data: sellers = [], isLoading: loading, refetch } = useQuery({
+    queryKey: ['sellers-config', seller?.company_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from('sellers')
         .select('id, name, email, role, department, active, auth_user_id, avatar_url, is_sales_active, status')
-        .eq('company_id', company_id)
-        .order('name'),
-    [],
-  )
+        .order('name')
+
+      if (error) { console.error('[useSellersParaConfig]', error); throw error }
+      return (data ?? []) as SellerConfig[]
+    },
+    enabled: !!seller,
+    staleTime: 1000 * 60 * 2,
+  })
+
+  return { data: sellers.length > 0 ? sellers : null, loading, error: null, refetch }
 }
 
 /* ── monthly_goals ─────────────────────────────────────────────────────────── */

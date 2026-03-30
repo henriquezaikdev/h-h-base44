@@ -474,7 +474,7 @@ function AbaMetas({ notify }: { notify: (ok: boolean, msg: string) => void }) {
   const [year, setYear] = useState(now.getFullYear())
   const { data: goals, loading, refetch } = useMonthlyGoals(month, year)
   const { data: sellers } = useSellersParaConfig()
-  const activeSellers = (sellers ?? []).filter(s => s.active && s.role === 'seller')
+  const activeSellers = (sellers ?? []).filter(s => s.active && (s.is_sales_active || s.role === 'seller'))
 
   const [editGoal, setEditGoal] = useState<{ seller_id: string; seller_name: string; sales_target: string; calls_target: string } | null>(null)
   const [saving, setSaving] = useState(false)
