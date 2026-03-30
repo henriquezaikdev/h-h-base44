@@ -75,8 +75,9 @@ interface Seller {
   id: string
   name: string
   role: string
-  is_sales_active: boolean | null
+  is_active: boolean | null
   active: boolean | null
+  status: string | null
 }
 
 interface Client {
@@ -139,7 +140,7 @@ export function useGestorData(filters: GestorFilters) {
         .select('id, total, subtotal, discount, status, seller_id, client_id, created_at, approved_at, nfe_status')
         .eq('company_id', CID).order('created_at', { ascending: false }).limit(10000),
       supabase.from('sellers')
-        .select('id, name, role, is_sales_active, active')
+        .select('id, name, role, is_active, active, status')
         .eq('company_id', CID),
       supabase.from('clients')
         .select('id, name, status, last_order_at, total_revenue, priority_score')
@@ -231,7 +232,7 @@ export function useGestorData(filters: GestorFilters) {
   const sellersResult = useMemo<SellerResult[]>(() => {
     const sellerIdsWithOrders = new Set(approved.map(o => o.seller_id).filter(Boolean))
     const relevantSellers = sellers.filter(s =>
-      s.is_sales_active || s.role === 'seller' || sellerIdsWithOrders.has(s.id)
+      s.is_active || s.role === 'seller' || sellerIdsWithOrders.has(s.id)
     )
 
     const salesMap = new Map<string, { count: number; total: number; clients: Set<string> }>()

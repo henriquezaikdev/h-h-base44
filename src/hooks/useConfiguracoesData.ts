@@ -40,7 +40,7 @@ export interface SellerConfig {
   active: boolean
   auth_user_id: string | null
   avatar_url: string | null
-  is_sales_active: boolean | null
+  is_active: boolean | null
   status: string | null
 }
 
@@ -51,7 +51,7 @@ export function useSellersParaConfig() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('sellers')
-        .select('id, name, email, role, department, active, auth_user_id, avatar_url, is_sales_active, status')
+        .select('id, name, email, role, department, active, auth_user_id, avatar_url, is_active, status')
         .order('name')
 
       if (error) { console.error('[useSellersParaConfig]', error); throw error }

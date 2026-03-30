@@ -276,7 +276,7 @@ function AbaUsuarios({ notify }: { notify: (ok: boolean, msg: string) => void })
       await supabase.from('sellers').update({
         name: editSeller.name, role: editSeller.role,
         department: editSeller.department || null,
-        is_sales_active: editSeller.isSales,
+        is_active: editSeller.isSales,
       }).eq('id', editSeller.id)
       notify(true, 'Perfil atualizado')
       setEditSeller(null)
@@ -343,7 +343,7 @@ function AbaUsuarios({ notify }: { notify: (ok: boolean, msg: string) => void })
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="min-w-[160px]">
-                  <DropdownMenuItem onClick={() => setEditSeller({ id: s.id, name: s.name, role: s.role, department: s.department ?? '', isSales: !!s.is_sales_active })}>
+                  <DropdownMenuItem onClick={() => setEditSeller({ id: s.id, name: s.name, role: s.role, department: s.department ?? '', isSales: !!s.is_active })}>
                     <Pencil size={13} className="mr-2 text-[#9CA3AF]" /> Editar perfil
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => { setResetTarget({ name: s.name, authId }); setResetPw(null) }}>
@@ -557,7 +557,7 @@ function AbaMetas({ notify }: { notify: (ok: boolean, msg: string) => void }) {
   const { data: goals, loading, refetch } = useMonthlyGoals(month, year)
   const { sellers: allS } = useSellersData()
   const { data: cfg } = useAppConfig()
-  const activeSellers = allS.filter(s => s.is_sales_active || s.role === 'seller')
+  const activeSellers = allS.filter(s => s.is_active || s.role === 'seller')
 
   const [editGoal, setEditGoal] = useState<{
     seller_id: string; seller_name: string

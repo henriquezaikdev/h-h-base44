@@ -8,7 +8,7 @@ export interface SellerRow {
   role: string;
   status?: string | null;
   department?: string | null;
-  is_sales_active?: boolean | null;
+  is_active?: boolean | null;
   avatar_url?: string | null;
   [key: string]: unknown;
 }
