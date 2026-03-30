@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Settings, Building2, Users, Target, Save, Upload, Trash2,
-  ImageIcon, UserPlus, KeyRound, Shield, Check,
-  AlertTriangle, Eye, EyeOff, Copy,
+  ImageIcon, UserPlus, KeyRound, Check, MoreVertical,
+  AlertTriangle, Eye, EyeOff, Copy, CheckCircle2, XCircle,
+  UserCog, ShieldCheck, Pencil,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
@@ -11,6 +12,7 @@ import { useAppConfig, upsertAppConfig, useMonthlyGoals } from '../hooks/useConf
 import { useSellersData } from '../hooks/useSellersData'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog'
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '../components/ui/dropdown-menu'
 import { Progress } from '../components/ui/progress'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -208,65 +210,86 @@ function AbaGeral({ notify }: { notify: (ok: boolean, msg: string) => void }) {
    ABA USUÁRIOS
    ═══════════════════════════════════════════════════════════════════════════ */
 
+const PERM_MODULES = ['Meu Dia','Dashboard','Clientes','Pedidos','Produtos','Compras','Estoque','Financeiro','Tarefas','Mural','Configurações'] as const
+const PERM_MAP: Record<string, boolean[]> = {
+  owner:     [true,true,true,true,true,true,true,true,true,true,true],
+  admin:     [true,true,true,true,true,true,true,true,true,true,true],
+  manager:   [true,true,true,true,true,true,true,true,true,true,false],
+  seller:    [true,false,true,true,true,true,true,false,true,true,false],
+  logistics: [true,false,false,false,false,false,true,false,true,true,false],
+  entregas:  [true,false,false,false,false,false,false,false,false,false,false],
+}
+
 function AbaUsuarios({ notify }: { notify: (ok: boolean, msg: string) => void }) {
   const { sellers: allSellers, loading } = useSellersData()
   const [showInactive, setShowInactive] = useState(false)
-  const refetch = useCallback(() => { /* TanStack auto-refetches */ }, [])
   const [inviteOpen, setInviteOpen] = useState(false)
-  const [resetTarget, setResetTarget] = useState<{ id: string; name: string; authId: string | null } | null>(null)
-  const [newPassword, setNewPassword] = useState<string | null>(null)
+  const [resetTarget, setResetTarget] = useState<{ name: string; authId: string | null } | null>(null)
+  const [resetPw, setResetPw] = useState<string | null>(null)
+  const [resetLoading, setResetLoading] = useState(false)
+  const [editSeller, setEditSeller] = useState<{ id: string; name: string; role: string; department: string; isSales: boolean } | null>(null)
+  const [editSaving, setEditSaving] = useState(false)
+  const [permSeller, setPermSeller] = useState<{ name: string; role: string } | null>(null)
 
   const list = allSellers.filter(s => showInactive || (s.status === 'ATIVO' || s.status === null))
 
   async function handleInvite(data: { name: string; email: string; role: string; department: string; password: string }) {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/invite-user`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...data, company_id: CID }),
     })
     const json = await res.json()
     if (json.error) { notify(false, json.error); return null }
     notify(true, `Usuário ${data.name} criado`)
-    refetch()
     return json.temp_password as string
   }
 
-  async function handleResetPassword() {
-    if (!resetTarget?.authId) { notify(false, 'Usuário sem auth_user_id'); return }
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/reset-user-password`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ auth_user_id: resetTarget.authId }),
-    })
-    const json = await res.json()
-    if (json.error) { notify(false, json.error); return }
-    setNewPassword(json.temp_password)
-    notify(true, `Senha de ${resetTarget.name} resetada`)
+  async function handleReset() {
+    if (!resetTarget?.authId) { notify(false, 'Sem auth_user_id'); return }
+    setResetLoading(true)
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/reset-user-password`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ auth_user_id: resetTarget.authId }),
+      })
+      const json = await res.json()
+      if (json.error) { notify(false, json.error); return }
+      setResetPw(json.temp_password)
+    } finally { setResetLoading(false) }
   }
 
-  async function toggleActive(id: string, current: boolean) {
-    const { error } = await supabase.from('sellers').update({ active: !current, status: !current ? 'ATIVO' : 'INATIVO' }).eq('id', id)
-    if (error) notify(false, error.message)
-    else { notify(true, !current ? 'Usuário reativado' : 'Usuário inativado'); refetch() }
+  async function toggleActive(id: string, isAtivo: boolean) {
+    await supabase.from('sellers').update({ active: !isAtivo, status: !isAtivo ? 'ATIVO' : 'INATIVO' }).eq('id', id)
+    notify(true, isAtivo ? 'Usuário inativado' : 'Usuário reativado')
+  }
+
+  async function handleEditSave() {
+    if (!editSeller) return
+    setEditSaving(true)
+    try {
+      await supabase.from('sellers').update({
+        name: editSeller.name, role: editSeller.role,
+        department: editSeller.department || null,
+        is_sales_active: editSeller.isSales,
+      }).eq('id', editSeller.id)
+      notify(true, 'Perfil atualizado')
+      setEditSeller(null)
+    } finally { setEditSaving(false) }
   }
 
   if (loading) return <LoadingBlock />
 
   return (
     <div className="space-y-4">
-      {/* Controls */}
       <div className="flex items-center justify-between">
         <label className="flex items-center gap-2 text-sm text-[#6B7280] cursor-pointer select-none">
           <input type="checkbox" checked={showInactive} onChange={() => setShowInactive(p => !p)}
             className="rounded border-[#D1D5DB] text-[#3B5BDB] focus:ring-[#3B5BDB]/20" />
           Exibir inativos
         </label>
-        <button onClick={() => setInviteOpen(true)} className={BTN_PRIMARY}>
-          <UserPlus size={14} /> Novo Usuário
-        </button>
+        <button onClick={() => setInviteOpen(true)} className={BTN_PRIMARY}><UserPlus size={14} /> Novo Usuário</button>
       </div>
 
-      {/* List */}
       <div className="bg-white rounded-xl border border-[#E5E7EB] divide-y divide-[#F3F4F6]">
         {list.length === 0 ? (
           <p className="py-16 text-center text-sm text-[#9CA3AF]">Nenhum usuário</p>
@@ -275,19 +298,16 @@ function AbaUsuarios({ notify }: { notify: (ok: boolean, msg: string) => void })
           const roleCfg = ROLE_LABELS[s.role] ?? { label: s.role, color: 'bg-[#F3F4F6] text-[#6B7280]' }
           const dept = s.department ? DEPT_LABELS[s.department] ?? s.department : null
           const ativo = s.status === 'ATIVO' || s.status === null
+          const authId = (s as Record<string, unknown>).auth_user_id as string | null
 
           return (
             <div key={s.id} className="px-5 py-4 flex items-center gap-4">
-              {/* Avatar */}
               {s.avatar_url ? (
-                <img src={s.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
+                <img src={s.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-[#EEF2FF] flex items-center justify-center text-xs font-semibold text-[#3B5BDB]">
-                  {initials}
-                </div>
+                <div className="w-10 h-10 rounded-full bg-[#EEF2FF] flex items-center justify-center text-xs font-semibold text-[#3B5BDB] shrink-0">{initials}</div>
               )}
 
-              {/* Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-[#111827] truncate">{s.name}</span>
@@ -297,69 +317,139 @@ function AbaUsuarios({ notify }: { notify: (ok: boolean, msg: string) => void })
                 <p className="text-xs text-[#9CA3AF] mt-0.5 truncate">{s.email}</p>
               </div>
 
-              {/* Status */}
-              <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                ativo ? 'bg-emerald-50 text-emerald-700' : 'bg-[#F3F4F6] text-[#9CA3AF]'
-              }`}>
+              <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ${ativo ? 'bg-emerald-50 text-emerald-700' : 'bg-[#F3F4F6] text-[#9CA3AF]'}`}>
                 {ativo ? 'Ativo' : 'Inativo'}
               </span>
 
-              {/* Actions */}
-              <div className="flex items-center gap-1">
-                <button onClick={() => setResetTarget({ id: s.id, name: s.name, authId: (s as Record<string, unknown>).auth_user_id as string | null })}
-                  title="Resetar senha" className="w-8 h-8 rounded-lg flex items-center justify-center text-[#9CA3AF] hover:text-[#3B5BDB] hover:bg-[#EEF2FF] transition-colors">
-                  <KeyRound size={14} />
-                </button>
-                <button onClick={() => toggleActive(s.id, ativo)}
-                  title={ativo ? 'Inativar' : 'Reativar'}
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-                    ativo ? 'text-[#9CA3AF] hover:text-red-500 hover:bg-red-50' : 'text-[#9CA3AF] hover:text-emerald-600 hover:bg-emerald-50'
-                  }`}>
-                  <Shield size={14} />
-                </button>
-              </div>
+              {/* Direct toggle button */}
+              <button onClick={() => toggleActive(s.id, ativo)} title={ativo ? 'Inativar' : 'Reativar'}
+                className={`h-8 px-2.5 rounded-lg text-xs font-medium border transition-colors shrink-0 ${
+                  ativo ? 'border-red-200 text-red-600 hover:bg-red-50' : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
+                }`}>
+                {ativo ? 'Inativar' : 'Reativar'}
+              </button>
+
+              {/* Menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="w-8 h-8 rounded-lg flex items-center justify-center text-[#9CA3AF] hover:bg-[#F3F4F6] transition-colors shrink-0">
+                    <MoreVertical size={14} />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-[160px]">
+                  <DropdownMenuItem onClick={() => setEditSeller({ id: s.id, name: s.name, role: s.role, department: s.department ?? '', isSales: !!s.is_sales_active })}>
+                    <Pencil size={13} className="mr-2 text-[#9CA3AF]" /> Editar perfil
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { setResetTarget({ name: s.name, authId }); setResetPw(null) }}>
+                    <KeyRound size={13} className="mr-2 text-[#9CA3AF]" /> Reset de senha
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setPermSeller({ name: s.name, role: s.department === 'entregas' ? 'entregas' : s.role })}>
+                    <ShieldCheck size={13} className="mr-2 text-[#9CA3AF]" /> Ver permissões
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           )
         })}
       </div>
 
-      {/* Invite Modal */}
+      {/* ── Invite Modal ── */}
       {inviteOpen && <InviteModal onClose={() => setInviteOpen(false)} onInvite={handleInvite} />}
 
-      {/* Reset Password Modal */}
-      {resetTarget && (
-        <Dialog open onOpenChange={() => { setResetTarget(null); setNewPassword(null) }}>
+      {/* ── Edit Profile Modal ── */}
+      {editSeller && (
+        <Dialog open onOpenChange={() => setEditSeller(null)}>
           <DialogContent className="max-w-sm p-0 gap-0">
             <DialogHeader className="px-6 pt-5 pb-3 border-b border-[#F3F4F6]">
-              <DialogTitle className="text-sm font-semibold">Resetar Senha</DialogTitle>
+              <DialogTitle className="text-sm font-semibold flex items-center gap-2"><UserCog size={14} className="text-[#9CA3AF]" /> Editar Perfil</DialogTitle>
+            </DialogHeader>
+            <div className="px-6 py-5 space-y-4">
+              <Field label="Nome" value={editSeller.name} onChange={v => setEditSeller(p => p ? { ...p, name: v } : null)} />
+              <div>
+                <label className="block text-xs font-medium text-[#6B7280] mb-1">Role</label>
+                <select value={editSeller.role} onChange={e => setEditSeller(p => p ? { ...p, role: e.target.value } : null)} className={INPUT}>
+                  <option value="owner">Owner</option><option value="seller">Vendedor</option>
+                  <option value="admin">Admin</option><option value="logistics">Logística</option>
+                </select>
+              </div>
+              <Field label="Departamento" value={editSeller.department} onChange={v => setEditSeller(p => p ? { ...p, department: v } : null)} placeholder="admin, logistics, entregas..." />
+              <label className="flex items-center gap-2 text-sm text-[#374151] cursor-pointer">
+                <input type="checkbox" checked={editSeller.isSales} onChange={e => setEditSeller(p => p ? { ...p, isSales: e.target.checked } : null)}
+                  className="rounded border-[#D1D5DB] text-[#3B5BDB] focus:ring-[#3B5BDB]/20" />
+                Vendedor ativo no CRM
+              </label>
+            </div>
+            <div className="px-6 py-4 border-t border-[#F3F4F6] flex justify-end gap-2">
+              <button onClick={() => setEditSeller(null)} className={BTN_OUTLINE}>Cancelar</button>
+              <button onClick={handleEditSave} disabled={editSaving} className={BTN_PRIMARY}>
+                <Save size={14} /> {editSaving ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* ── Reset Password Modal ── */}
+      {resetTarget && (
+        <Dialog open onOpenChange={() => { setResetTarget(null); setResetPw(null) }}>
+          <DialogContent className="max-w-sm p-0 gap-0">
+            <DialogHeader className="px-6 pt-5 pb-3 border-b border-[#F3F4F6]">
+              <DialogTitle className="text-sm font-semibold">Reset de Senha — {resetTarget.name}</DialogTitle>
             </DialogHeader>
             <div className="px-6 py-5">
-              {newPassword ? (
+              {resetPw ? (
                 <div className="space-y-3">
-                  <p className="text-sm text-[#6B7280]">Nova senha de <span className="font-semibold text-[#111827]">{resetTarget.name}</span>:</p>
-                  <div className="flex items-center gap-2 bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg px-3 py-2">
-                    <code className="text-sm font-mono text-[#111827] flex-1">{newPassword}</code>
-                    <button onClick={() => { navigator.clipboard.writeText(newPassword); notify(true, 'Copiada') }}
+                  <p className="text-sm text-[#6B7280]">Nova senha temporária:</p>
+                  <div className="flex items-center gap-2 bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg px-3 py-2.5">
+                    <code className="text-sm font-mono text-[#111827] flex-1">{resetPw}</code>
+                    <button onClick={() => { navigator.clipboard.writeText(resetPw); notify(true, 'Copiada') }}
                       className="p-1 text-[#9CA3AF] hover:text-[#3B5BDB] transition-colors"><Copy size={14} /></button>
                   </div>
-                  <p className="text-[11px] text-[#9CA3AF]">Salve esta senha — ela não será exibida novamente.</p>
+                  <p className="text-[11px] text-[#9CA3AF]">Salve esta senha — não será exibida novamente.</p>
+                </div>
+              ) : resetLoading ? (
+                <div className="py-8 flex flex-col items-center gap-2">
+                  <div className="w-5 h-5 border-2 border-[#3B5BDB] border-t-transparent rounded-full animate-spin" />
+                  <p className="text-sm text-[#9CA3AF]">Gerando nova senha...</p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  <p className="text-sm text-[#6B7280]">Resetar senha de <span className="font-semibold text-[#111827]">{resetTarget.name}</span>?</p>
-                  <p className="text-xs text-[#9CA3AF]">Uma nova senha temporária será gerada.</p>
+                <div className="space-y-2">
+                  <p className="text-sm text-[#6B7280]">Gerar nova senha temporária para <span className="font-semibold text-[#111827]">{resetTarget.name}</span>?</p>
+                  <p className="text-xs text-[#9CA3AF]">A senha atual será substituída.</p>
                 </div>
               )}
             </div>
             <div className="px-6 py-4 border-t border-[#F3F4F6] flex justify-end gap-2">
-              <button onClick={() => { setResetTarget(null); setNewPassword(null) }} className={BTN_OUTLINE}>
-                {newPassword ? 'Fechar' : 'Cancelar'}
-              </button>
-              {!newPassword && (
-                <button onClick={handleResetPassword} className={BTN_PRIMARY}>
-                  <KeyRound size={14} /> Resetar
-                </button>
-              )}
+              <button onClick={() => { setResetTarget(null); setResetPw(null) }} className={BTN_OUTLINE}>{resetPw ? 'Fechar' : 'Cancelar'}</button>
+              {!resetPw && !resetLoading && <button onClick={handleReset} className={BTN_PRIMARY}><KeyRound size={14} /> Resetar</button>}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* ── Permissions Modal ── */}
+      {permSeller && (
+        <Dialog open onOpenChange={() => setPermSeller(null)}>
+          <DialogContent className="max-w-md p-0 gap-0">
+            <DialogHeader className="px-6 pt-5 pb-3 border-b border-[#F3F4F6]">
+              <DialogTitle className="text-sm font-semibold flex items-center gap-2"><ShieldCheck size={14} className="text-[#9CA3AF]" /> Permissões — {permSeller.name}</DialogTitle>
+            </DialogHeader>
+            <div className="px-6 py-4">
+              <p className="text-xs text-[#9CA3AF] mb-3">Perfil: <span className="font-semibold text-[#111827]">{ROLE_LABELS[permSeller.role]?.label ?? permSeller.role}</span></p>
+              <div className="space-y-1">
+                {PERM_MODULES.map((mod, i) => {
+                  const has = PERM_MAP[permSeller.role]?.[i] ?? false
+                  return (
+                    <div key={mod} className="flex items-center justify-between py-1.5">
+                      <span className="text-sm text-[#374151]">{mod}</span>
+                      {has ? <CheckCircle2 size={16} className="text-emerald-500" /> : <XCircle size={16} className="text-[#D1D5DB]" />}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-[#F3F4F6] flex justify-end">
+              <button onClick={() => setPermSeller(null)} className={BTN_OUTLINE}>Fechar</button>
             </div>
           </DialogContent>
         </Dialog>
@@ -393,67 +483,50 @@ function InviteModal({ onClose, onInvite }: {
         <DialogHeader className="px-6 pt-5 pb-3 border-b border-[#F3F4F6]">
           <DialogTitle className="text-sm font-semibold">Novo Usuário</DialogTitle>
         </DialogHeader>
-
         {tempPw ? (
-          <>
-            <div className="px-6 py-5 space-y-3">
-              <p className="text-sm text-[#6B7280]">Usuário <span className="font-semibold text-[#111827]">{form.name}</span> criado.</p>
-              <div>
-                <label className="block text-xs font-medium text-[#6B7280] mb-1">Senha temporária</label>
-                <div className="flex items-center gap-2 bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg px-3 py-2">
-                  <code className="text-sm font-mono text-[#111827] flex-1">{tempPw}</code>
-                  <button onClick={() => navigator.clipboard.writeText(tempPw)}
-                    className="p-1 text-[#9CA3AF] hover:text-[#3B5BDB] transition-colors"><Copy size={14} /></button>
-                </div>
+          <div className="px-6 py-5 space-y-3">
+            <p className="text-sm text-[#6B7280]">Usuário <span className="font-semibold text-[#111827]">{form.name}</span> criado.</p>
+            <div>
+              <label className="block text-xs font-medium text-[#6B7280] mb-1">Senha temporária</label>
+              <div className="flex items-center gap-2 bg-[#F9FAFB] border border-[#E5E7EB] rounded-lg px-3 py-2">
+                <code className="text-sm font-mono text-[#111827] flex-1">{tempPw}</code>
+                <button onClick={() => navigator.clipboard.writeText(tempPw)} className="p-1 text-[#9CA3AF] hover:text-[#3B5BDB] transition-colors"><Copy size={14} /></button>
               </div>
-              <p className="text-[11px] text-[#9CA3AF]">Compartilhe esta senha com o usuário. Ela não será exibida novamente.</p>
             </div>
-            <div className="px-6 py-4 border-t border-[#F3F4F6] flex justify-end">
+            <p className="text-[11px] text-[#9CA3AF]">Compartilhe esta senha. Ela não será exibida novamente.</p>
+            <div className="pt-2 flex justify-end">
               <button onClick={onClose} className={BTN_PRIMARY}>Concluir</button>
             </div>
-          </>
+          </div>
         ) : (
           <>
             <div className="px-6 py-5 space-y-4">
               <Field label="Nome *" value={form.name} onChange={v => setForm(p => ({ ...p, name: v }))} placeholder="Nome completo" />
               <Field label="Email *" value={form.email} onChange={v => setForm(p => ({ ...p, email: v }))} placeholder="email@empresa.com" />
-
               <div>
                 <label className="block text-xs font-medium text-[#6B7280] mb-1">Perfil</label>
-                <select value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))}
-                  className={INPUT}>
-                  <option value="seller">Vendedor</option>
-                  <option value="admin">Admin / Financeiro</option>
-                  <option value="logistics">Logística</option>
-                  <option value="owner">Owner</option>
+                <select value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))} className={INPUT}>
+                  <option value="seller">Vendedor</option><option value="admin">Admin / Financeiro</option>
+                  <option value="logistics">Logística</option><option value="owner">Owner</option>
                 </select>
               </div>
-
               <div>
                 <label className="block text-xs font-medium text-[#6B7280] mb-1">Departamento</label>
-                <select value={form.department} onChange={e => setForm(p => ({ ...p, department: e.target.value }))}
-                  className={INPUT}>
-                  <option value="">Nenhum</option>
-                  <option value="admin">Financeiro</option>
-                  <option value="logistics">Logística</option>
-                  <option value="entregas">Entregas</option>
+                <select value={form.department} onChange={e => setForm(p => ({ ...p, department: e.target.value }))} className={INPUT}>
+                  <option value="">Nenhum</option><option value="admin">Financeiro</option>
+                  <option value="logistics">Logística</option><option value="entregas">Entregas</option>
                 </select>
               </div>
-
               <div>
-                <label className="block text-xs font-medium text-[#6B7280] mb-1">Senha (opcional — gerada automaticamente se vazio)</label>
+                <label className="block text-xs font-medium text-[#6B7280] mb-1">Senha (opcional)</label>
                 <div className="relative">
-                  <input type={showPw ? 'text' : 'password'} value={form.password}
-                    onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
-                    placeholder="Senha temporária" className={INPUT} />
-                  <button type="button" onClick={() => setShowPw(p => !p)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#374151]">
+                  <input type={showPw ? 'text' : 'password'} value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} placeholder="Gerada se vazio" className={INPUT} />
+                  <button type="button" onClick={() => setShowPw(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#374151]">
                     {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
                 </div>
               </div>
             </div>
-
             <div className="px-6 py-4 border-t border-[#F3F4F6] flex justify-end gap-2">
               <button onClick={onClose} className={BTN_OUTLINE}>Cancelar</button>
               <button onClick={handleSubmit} disabled={saving || !form.name || !form.email} className={BTN_PRIMARY}>
@@ -476,45 +549,50 @@ function AbaMetas({ notify }: { notify: (ok: boolean, msg: string) => void }) {
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [year, setYear] = useState(now.getFullYear())
   const { data: goals, loading, refetch } = useMonthlyGoals(month, year)
-  const { sellers: allSellersForMetas } = useSellersData()
-  const activeSellers = allSellersForMetas.filter(s => s.is_sales_active || s.role === 'seller')
+  const { sellers: allS } = useSellersData()
+  const { data: cfg } = useAppConfig()
+  const activeSellers = allS.filter(s => s.is_sales_active || s.role === 'seller')
 
-  const [editGoal, setEditGoal] = useState<{ seller_id: string; seller_name: string; sales_target: string; calls_target: string } | null>(null)
+  const [editGoal, setEditGoal] = useState<{
+    seller_id: string; seller_name: string
+    sales_target: string; calls_target: string; call_attempts_target: string
+    whatsapp_response_target: string; whatsapp_no_response_target: string
+  } | null>(null)
   const [saving, setSaving] = useState(false)
+  const [reatMeta, setReatMeta] = useState('')
 
-  const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+  useEffect(() => { if (cfg?.reativacao_meta_mensal) setReatMeta(cfg.reativacao_meta_mensal) }, [cfg])
 
-  function getGoal(sellerId: string) {
-    return (goals ?? []).find(g => g.seller_id === sellerId)
-  }
+  const MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+
+  function getGoal(sid: string) { return (goals ?? []).find(g => g.seller_id === sid) }
 
   async function handleSaveGoal() {
     if (!editGoal) return
     setSaving(true)
     try {
       const { error } = await supabase.from('monthly_goals').upsert({
-        company_id: CID,
-        seller_id: editGoal.seller_id,
-        month,
-        year,
+        company_id: CID, seller_id: editGoal.seller_id, month, year,
         sales_target: parseFloat(editGoal.sales_target) || 0,
         calls_target: parseInt(editGoal.calls_target) || 0,
+        call_attempts_target: parseInt(editGoal.call_attempts_target) || 0,
+        whatsapp_response_target: parseInt(editGoal.whatsapp_response_target) || 0,
+        whatsapp_no_response_target: parseInt(editGoal.whatsapp_no_response_target) || 0,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'company_id,seller_id,month,year' })
       if (error) { notify(false, error.message); return }
       notify(true, `Meta de ${editGoal.seller_name} salva`)
-      setEditGoal(null)
-      refetch()
+      setEditGoal(null); refetch()
     } finally { setSaving(false) }
   }
 
   async function handleReplicate() {
-    const nextMonth = month === 12 ? 1 : month + 1
-    const nextYear = month === 12 ? year + 1 : year
+    const nm = month === 12 ? 1 : month + 1
+    const ny = month === 12 ? year + 1 : year
     let count = 0
     for (const g of goals ?? []) {
       const { error } = await supabase.from('monthly_goals').upsert({
-        company_id: CID, seller_id: g.seller_id, month: nextMonth, year: nextYear,
+        company_id: CID, seller_id: g.seller_id, month: nm, year: ny,
         sales_target: g.sales_target, calls_target: g.calls_target,
         call_attempts_target: g.call_attempts_target,
         whatsapp_response_target: g.whatsapp_response_target,
@@ -523,14 +601,19 @@ function AbaMetas({ notify }: { notify: (ok: boolean, msg: string) => void }) {
       }, { onConflict: 'company_id,seller_id,month,year' })
       if (!error) count++
     }
-    notify(true, `${count} metas replicadas para ${MONTHS[nextMonth - 1]}/${nextYear}`)
+    notify(true, `${count} metas replicadas para ${MONTHS[nm - 1]}/${ny}`)
+  }
+
+  async function saveReatMeta() {
+    const { error } = await upsertAppConfig('reativacao_meta_mensal', reatMeta)
+    if (error) notify(false, error.message); else notify(true, 'Meta de reativação salva')
   }
 
   if (loading) return <LoadingBlock />
 
   return (
-    <div className="space-y-4">
-      {/* Period picker */}
+    <div className="space-y-6">
+      {/* Period + replicate */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <select value={month} onChange={e => setMonth(Number(e.target.value))} className="text-sm border border-[#E5E7EB] rounded-lg px-3 py-1.5 bg-white outline-none focus:border-[#3B5BDB]">
@@ -540,74 +623,93 @@ function AbaMetas({ notify }: { notify: (ok: boolean, msg: string) => void }) {
             {[2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
-        <button onClick={handleReplicate} disabled={!goals || goals.length === 0} className={BTN_OUTLINE}>
-          Replicar para próximo mês
-        </button>
+        <button onClick={handleReplicate} disabled={!goals || goals.length === 0} className={BTN_OUTLINE}>Replicar para próximo mês</button>
       </div>
 
-      {/* Sellers goals */}
-      <div className="bg-white rounded-xl border border-[#E5E7EB] overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-[#E5E7EB] bg-[#F9FAFB]">
-              <th className="text-left px-5 py-3 text-xs font-medium text-[#6B7280] uppercase tracking-wide">Vendedor</th>
-              <th className="text-right px-5 py-3 text-xs font-medium text-[#6B7280] uppercase tracking-wide">Meta Vendas (R$)</th>
-              <th className="text-right px-5 py-3 text-xs font-medium text-[#6B7280] uppercase tracking-wide">Ligações/mês</th>
-              <th className="text-right px-5 py-3 text-xs font-medium text-[#6B7280] uppercase tracking-wide">Realizado</th>
-              <th className="px-5 py-3 w-16" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#F3F4F6]">
-            {activeSellers.length === 0 ? (
-              <tr><td colSpan={5} className="px-5 py-16 text-center text-[#9CA3AF]">Nenhum vendedor ativo</td></tr>
-            ) : activeSellers.map(s => {
-              const g = getGoal(s.id)
-              const pct = g && g.sales_target > 0 ? Math.min(100, (g.sales_achieved / g.sales_target) * 100) : 0
-              return (
-                <tr key={s.id} className="hover:bg-[#FAFAF9] transition-colors">
-                  <td className="px-5 py-3 font-medium text-[#111827]">{s.name}</td>
-                  <td className="px-5 py-3 text-right tabular-nums">{g ? `R$ ${g.sales_target.toLocaleString('pt-BR')}` : '—'}</td>
-                  <td className="px-5 py-3 text-right tabular-nums">{g?.calls_target ?? '—'}</td>
-                  <td className="px-5 py-3">
-                    <div className="flex items-center justify-end gap-2">
-                      <Progress value={pct} className="w-20 h-1.5 [&>div]:bg-[#3B5BDB]" />
-                      <span className="text-xs text-[#6B7280] tabular-nums w-9 text-right">{Math.round(pct)}%</span>
-                    </div>
-                  </td>
-                  <td className="px-5 py-3">
-                    <button onClick={() => setEditGoal({
-                      seller_id: s.id, seller_name: s.name,
-                      sales_target: String(g?.sales_target ?? ''),
-                      calls_target: String(g?.calls_target ?? ''),
-                    })} className="text-[#9CA3AF] hover:text-[#3B5BDB] transition-colors">
-                      <Settings size={14} />
-                    </button>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+      {/* ── Metas Mensais ── */}
+      <Card title="Metas Mensais" icon={Target}>
+        <div className="overflow-x-auto -mx-6 px-6">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[#E5E7EB]">
+                <th className="text-left py-2 pr-4 text-xs font-medium text-[#6B7280] uppercase tracking-wide">Vendedor</th>
+                <th className="text-right py-2 px-3 text-xs font-medium text-[#6B7280] uppercase tracking-wide">Vendas (R$)</th>
+                <th className="text-right py-2 px-3 text-xs font-medium text-[#6B7280] uppercase tracking-wide">Ligações</th>
+                <th className="text-right py-2 px-3 text-xs font-medium text-[#6B7280] uppercase tracking-wide">Tentativas</th>
+                <th className="text-right py-2 px-3 text-xs font-medium text-[#6B7280] uppercase tracking-wide">WA c/resp</th>
+                <th className="text-right py-2 px-3 text-xs font-medium text-[#6B7280] uppercase tracking-wide">WA s/resp</th>
+                <th className="text-right py-2 px-3 text-xs font-medium text-[#6B7280] uppercase tracking-wide">Realizado</th>
+                <th className="py-2 w-10" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#F9FAFB]">
+              {activeSellers.length === 0 ? (
+                <tr><td colSpan={8} className="py-12 text-center text-[#9CA3AF]">Nenhum vendedor ativo</td></tr>
+              ) : activeSellers.map(s => {
+                const g = getGoal(s.id)
+                const pct = g && g.sales_target > 0 ? Math.min(100, (g.sales_achieved / g.sales_target) * 100) : 0
+                return (
+                  <tr key={s.id} className="hover:bg-[#FAFAF9] transition-colors">
+                    <td className="py-2.5 pr-4 font-medium text-[#111827]">{s.name}</td>
+                    <td className="py-2.5 px-3 text-right tabular-nums text-[#374151]">{g ? `R$ ${g.sales_target.toLocaleString('pt-BR')}` : '—'}</td>
+                    <td className="py-2.5 px-3 text-right tabular-nums text-[#374151]">{g?.calls_target ?? '—'}</td>
+                    <td className="py-2.5 px-3 text-right tabular-nums text-[#374151]">{g?.call_attempts_target ?? '—'}</td>
+                    <td className="py-2.5 px-3 text-right tabular-nums text-[#374151]">{g?.whatsapp_response_target ?? '—'}</td>
+                    <td className="py-2.5 px-3 text-right tabular-nums text-[#374151]">{g?.whatsapp_no_response_target ?? '—'}</td>
+                    <td className="py-2.5 px-3">
+                      <div className="flex items-center justify-end gap-2">
+                        <Progress value={pct} className="w-16 h-1.5 [&>div]:bg-[#3B5BDB]" />
+                        <span className="text-xs text-[#6B7280] tabular-nums w-9 text-right">{Math.round(pct)}%</span>
+                      </div>
+                    </td>
+                    <td className="py-2.5 pl-2">
+                      <button onClick={() => {
+                        const gg = getGoal(s.id)
+                        setEditGoal({
+                          seller_id: s.id, seller_name: s.name,
+                          sales_target: String(gg?.sales_target ?? ''), calls_target: String(gg?.calls_target ?? ''),
+                          call_attempts_target: String(gg?.call_attempts_target ?? ''),
+                          whatsapp_response_target: String(gg?.whatsapp_response_target ?? ''),
+                          whatsapp_no_response_target: String(gg?.whatsapp_no_response_target ?? ''),
+                        })
+                      }} className="text-[#9CA3AF] hover:text-[#3B5BDB] transition-colors"><Settings size={14} /></button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Card>
 
-      {/* Edit Goal Modal */}
+      {/* ── Meta Reativação ── */}
+      <Card title="Meta de Reativação Mensal" icon={Target}>
+        <div className="flex items-end gap-3">
+          <div className="flex-1">
+            <label className="block text-xs font-medium text-[#6B7280] mb-1">Clientes reativados por mês</label>
+            <input type="number" value={reatMeta} onChange={e => setReatMeta(e.target.value)} placeholder="10" className={INPUT} />
+          </div>
+          <button onClick={saveReatMeta} className={BTN_PRIMARY}><Save size={14} /> Salvar</button>
+        </div>
+      </Card>
+
+      {/* ── Edit Goal Modal ── */}
       {editGoal && (
         <Dialog open onOpenChange={() => setEditGoal(null)}>
           <DialogContent className="max-w-sm p-0 gap-0">
             <DialogHeader className="px-6 pt-5 pb-3 border-b border-[#F3F4F6]">
               <DialogTitle className="text-sm font-semibold">Meta — {editGoal.seller_name}</DialogTitle>
             </DialogHeader>
-            <div className="px-6 py-5 space-y-4">
-              <Field label="Meta de Vendas (R$)" value={editGoal.sales_target}
-                onChange={v => setEditGoal(p => p ? { ...p, sales_target: v } : null)} placeholder="35000" />
-              <Field label="Meta de Ligações/mês" value={editGoal.calls_target}
-                onChange={v => setEditGoal(p => p ? { ...p, calls_target: v } : null)} placeholder="210" />
+            <div className="px-6 py-5 space-y-3">
+              <Field label="Meta de Vendas (R$)" value={editGoal.sales_target} onChange={v => setEditGoal(p => p ? { ...p, sales_target: v } : null)} placeholder="35000" />
+              <Field label="Ligações/mês" value={editGoal.calls_target} onChange={v => setEditGoal(p => p ? { ...p, calls_target: v } : null)} placeholder="210" />
+              <Field label="Tentativas/mês" value={editGoal.call_attempts_target} onChange={v => setEditGoal(p => p ? { ...p, call_attempts_target: v } : null)} placeholder="300" />
+              <Field label="WhatsApp c/ resposta" value={editGoal.whatsapp_response_target} onChange={v => setEditGoal(p => p ? { ...p, whatsapp_response_target: v } : null)} placeholder="200" />
+              <Field label="WhatsApp s/ resposta" value={editGoal.whatsapp_no_response_target} onChange={v => setEditGoal(p => p ? { ...p, whatsapp_no_response_target: v } : null)} placeholder="100" />
             </div>
             <div className="px-6 py-4 border-t border-[#F3F4F6] flex justify-end gap-2">
               <button onClick={() => setEditGoal(null)} className={BTN_OUTLINE}>Cancelar</button>
-              <button onClick={handleSaveGoal} disabled={saving} className={BTN_PRIMARY}>
-                <Save size={14} /> {saving ? 'Salvando...' : 'Salvar'}
-              </button>
+              <button onClick={handleSaveGoal} disabled={saving} className={BTN_PRIMARY}><Save size={14} /> {saving ? 'Salvando...' : 'Salvar'}</button>
             </div>
           </DialogContent>
         </Dialog>
