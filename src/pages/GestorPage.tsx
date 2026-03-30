@@ -215,35 +215,107 @@ function ComercialTab({ data, month, year }: { data: ReturnType<typeof useGestor
           <TabsTrigger value="inativos" className="text-xs gap-1"><AlertTriangle size={12} /> Inativos</TabsTrigger>
         </TabsList>
 
-        {/* Vendedores (cards) */}
+        {/* Vendedores */}
         <TabsContent value="vendedores">
-          <div className="grid grid-cols-3 gap-4 mt-4">
-            {sellersResult.filter(s => s.revenue > 0 || s.salesTarget > 0).map((s, i) => {
-              const initials = s.name.split(' ').slice(0, 2).map(w => w[0] ?? '').join('').toUpperCase()
-              return (
-                <motion.div key={s.id} {...fadeUp(i * 0.05)}
-                  className="bg-white rounded-xl border border-[#E5E7EB] p-5 hover:border-[#D1D5DB] hover:shadow-sm transition-all duration-200">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-full bg-[#EEF2FF] flex items-center justify-center text-xs font-bold text-[#3B5BDB]">{initials}</div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-[#111827] truncate">{s.name}</p>
-                      <p className="text-[11px] text-[#9CA3AF]">{s.ordersCount} pedidos · {s.clientsCount} clientes</p>
-                    </div>
-                  </div>
-                  <p className="text-2xl font-bold text-[#111827] tabular-nums">{fmt(s.revenue)}</p>
-                  {s.salesTarget > 0 ? (
-                    <div className="mt-3">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] text-[#9CA3AF]">Meta: {fmtK(s.salesTarget)}</span>
-                        <span className={`text-[10px] font-bold ${s.goalPercent >= 100 ? 'text-emerald-600' : s.goalPercent >= 70 ? 'text-amber-600' : 'text-red-500'}`}>{Math.round(s.goalPercent)}%</span>
+          <div className="space-y-6 mt-4">
+            {/* Saúde do Negócio — Summary KPIs */}
+            <div className="grid grid-cols-5 gap-3">
+              {[
+                { label: 'Receita', value: fmt(data.kpis.revenue), accent: 'bg-white border-[#E5E7EB]' },
+                { label: 'Resultado Real', value: fmt(data.kpis.profit - data.kpis.totalComissao), accent: (data.kpis.profit - data.kpis.totalComissao) >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200' },
+                { label: 'Margem Média', value: `${data.kpis.marginPercent.toFixed(1)}%`, accent: 'bg-white border-[#E5E7EB]' },
+                { label: 'Vendedores', value: String(sellersResult.filter(s => s.revenue > 0).length), accent: 'bg-white border-[#E5E7EB]' },
+                { label: 'Pedidos', value: String(data.kpis.ordersCount), accent: 'bg-white border-[#E5E7EB]' },
+              ].map(k => (
+                <div key={k.label} className={`rounded-xl border ${k.accent} p-4`}>
+                  <p className="text-[10px] text-[#9CA3AF] font-medium uppercase tracking-wide">{k.label}</p>
+                  <p className="text-lg font-bold text-[#111827] mt-1 tabular-nums">{k.value}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Seller Cards */}
+            <div className="grid grid-cols-3 gap-4">
+              {sellersResult.filter(s => s.revenue > 0 || s.salesTarget > 0).map((s, i) => {
+                const initials = s.name.split(' ').slice(0, 2).map(w => w[0] ?? '').join('').toUpperCase()
+                const status = s.goalPercent >= 100 ? 'ESCALAR' : s.goalPercent >= 70 ? 'NO CAMINHO' : s.salesTarget > 0 ? 'RISCO' : null
+                const statusColor = status === 'ESCALAR' ? 'bg-emerald-100 text-emerald-700' : status === 'NO CAMINHO' ? 'bg-amber-100 text-amber-700' : status === 'RISCO' ? 'bg-rose-100 text-rose-600' : ''
+
+                return (
+                  <motion.div key={s.id} {...fadeUp(i * 0.05)}
+                    className="bg-white rounded-xl border border-[#E5E7EB] p-5 hover:border-[#D1D5DB] hover:shadow-sm transition-all duration-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-[#EEF2FF] flex items-center justify-center text-xs font-bold text-[#3B5BDB]">{initials}</div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-[#111827] truncate">{s.name}</p>
+                          <p className="text-[11px] text-[#9CA3AF]">{s.ordersCount} pedidos · {s.clientsCount} clientes</p>
+                        </div>
                       </div>
-                      <Progress value={s.goalPercent} className={`h-2 ${s.goalPercent >= 100 ? '[&>div]:bg-emerald-500' : s.goalPercent >= 70 ? '[&>div]:bg-amber-500' : '[&>div]:bg-red-400'}`} />
+                      {status && <span className={`text-[9px] font-bold px-2 py-1 rounded-md ${statusColor}`}>{status}</span>}
                     </div>
-                  ) : <p className="text-[10px] text-[#D1D5DB] mt-3">Meta não configurada</p>}
-                </motion.div>
-              )
-            })}
-            {sellersResult.length === 0 && <p className="col-span-3 py-12 text-center text-sm text-[#9CA3AF]">Nenhum vendedor com vendas</p>}
+
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div>
+                        <p className="text-[10px] text-[#9CA3AF]">Faturado</p>
+                        <p className="text-lg font-bold text-[#111827] tabular-nums">{fmtK(s.revenue)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-[#9CA3AF]">Margem</p>
+                        <p className={`text-lg font-bold tabular-nums ${s.marginBruta >= 30 ? 'text-emerald-600' : s.marginBruta >= 15 ? 'text-amber-600' : 'text-rose-600'}`}>{s.marginBruta.toFixed(1)}%</p>
+                      </div>
+                    </div>
+
+                    {s.salesTarget > 0 ? (
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] text-[#9CA3AF]">Eficiência de Meta</span>
+                          <span className={`text-[10px] font-bold ${s.goalPercent >= 100 ? 'text-emerald-600' : s.goalPercent >= 70 ? 'text-amber-600' : 'text-red-500'}`}>{Math.round(s.goalPercent)}%</span>
+                        </div>
+                        <Progress value={Math.min(s.goalPercent, 100)} className={`h-2 ${s.goalPercent >= 100 ? '[&>div]:bg-emerald-500' : s.goalPercent >= 70 ? '[&>div]:bg-amber-500' : '[&>div]:bg-red-400'}`} />
+                        <p className="text-[10px] text-[#9CA3AF] mt-1">Meta: {fmtK(s.salesTarget)}</p>
+                      </div>
+                    ) : <p className="text-[10px] text-[#D1D5DB]">Meta não configurada</p>}
+                  </motion.div>
+                )
+              })}
+              {sellersResult.length === 0 && <p className="col-span-3 py-12 text-center text-sm text-[#9CA3AF]">Nenhum vendedor com vendas</p>}
+            </div>
+
+            {/* Resultado Real por Vendedor */}
+            <motion.div {...fadeUp(0.3)} className="bg-white rounded-xl border border-[#E5E7EB]">
+              <div className="px-6 py-4 border-b border-[#F3F4F6]">
+                <h3 className="text-sm font-semibold text-[#111827]">Resultado Real por Vendedor</h3>
+                <p className="text-[10px] text-[#9CA3AF] mt-0.5">Quanto cada vendedor vendeu, margem e comissão</p>
+              </div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[#F3F4F6]">
+                    <th className="text-left px-6 py-3 text-[10px] font-medium text-[#9CA3AF] uppercase">#</th>
+                    <th className="text-left px-4 py-3 text-[10px] font-medium text-[#9CA3AF] uppercase">Vendedor</th>
+                    <th className="text-right px-4 py-3 text-[10px] font-medium text-[#9CA3AF] uppercase">Faturamento</th>
+                    <th className="text-right px-4 py-3 text-[10px] font-medium text-[#9CA3AF] uppercase">Margem Bruta</th>
+                    <th className="text-right px-4 py-3 text-[10px] font-medium text-[#9CA3AF] uppercase">Comissão</th>
+                    <th className="text-right px-6 py-3 text-[10px] font-medium text-[#9CA3AF] uppercase">Resultado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#F9FAFB]">
+                  {sellersResult.filter(s => s.revenue > 0).map((s, i) => {
+                    const resultado = s.revenue - (s.revenue * (100 - s.marginBruta) / 100) - s.comissaoReal
+                    return (
+                      <tr key={s.id} className="hover:bg-[#FAFAF9] transition-colors">
+                        <td className="px-6 py-3 text-[#9CA3AF] text-xs">{i + 1}.</td>
+                        <td className="px-4 py-3 font-medium text-[#111827]">{s.name}</td>
+                        <td className="px-4 py-3 text-right tabular-nums text-[#374151]">{fmt(s.revenue)}</td>
+                        <td className={`px-4 py-3 text-right tabular-nums font-semibold ${s.marginBruta >= 30 ? 'text-emerald-600' : 'text-amber-600'}`}>{s.marginBruta.toFixed(1)}%</td>
+                        <td className="px-4 py-3 text-right tabular-nums text-[#374151]">{fmt(s.comissaoReal)}</td>
+                        <td className={`px-6 py-3 text-right tabular-nums font-bold ${resultado >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{fmt(resultado)}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </motion.div>
           </div>
         </TabsContent>
 
@@ -406,18 +478,28 @@ function ComercialTab({ data, month, year }: { data: ReturnType<typeof useGestor
 
 function OperacionalTab({ data }: { data: ReturnType<typeof useGestorData> }) {
   const { sellersResult, kpis } = data
+  const activeSellers = sellersResult.filter(s => s.revenue > 0)
+
+  // Rankings
+  const byRevenue = [...activeSellers].sort((a, b) => b.revenue - a.revenue)
+  const byMargin = [...activeSellers].sort((a, b) => b.marginBruta - a.marginBruta)
+  const byClients = [...activeSellers].sort((a, b) => b.clientsCount - a.clientsCount)
+
+  // Alerts
+  const lowMargin = activeSellers.filter(s => s.marginBruta < 20)
+  const noGoal = activeSellers.filter(s => s.salesTarget === 0)
 
   return (
     <div className="space-y-6">
       <motion.div {...fadeUp(0)} className="space-y-1">
         <h2 className="text-lg font-semibold text-[#111827]">Operacional</h2>
-        <p className="text-sm text-[#9CA3AF]">Performance dos vendedores e indicadores operacionais</p>
+        <p className="text-sm text-[#9CA3AF]">Performance, rankings e alertas de gestão</p>
       </motion.div>
 
       {/* Summary cards */}
       <div className="grid grid-cols-4 gap-4">
         {[
-          { label: 'Vendedores Ativos', value: String(sellersResult.filter(s => s.revenue > 0).length), icon: Users, bg: 'bg-[#EEF2FF]', color: 'text-[#3B5BDB]' },
+          { label: 'Vendedores Ativos', value: String(activeSellers.length), icon: Users, bg: 'bg-[#EEF2FF]', color: 'text-[#3B5BDB]' },
           { label: 'Pedidos no Mês', value: String(kpis.ordersCount), icon: ShoppingCart, bg: 'bg-emerald-50', color: 'text-emerald-600' },
           { label: 'Ticket Médio', value: fmt(kpis.avgTicket), icon: DollarSign, bg: 'bg-amber-50', color: 'text-amber-600' },
           { label: 'NF-e Emitidas', value: String(kpis.invoicedCount), icon: Package, bg: 'bg-violet-50', color: 'text-violet-600' },
@@ -434,6 +516,60 @@ function OperacionalTab({ data }: { data: ReturnType<typeof useGestorData> }) {
           </motion.div>
         ))}
       </div>
+
+      {/* Top Performers — 3 rankings */}
+      <motion.div {...fadeUp(0.15)}>
+        <h3 className="text-sm font-semibold text-[#111827] mb-3 flex items-center gap-2">
+          <Target size={14} className="text-[#3B5BDB]" /> Top Performers
+        </h3>
+        <div className="grid grid-cols-3 gap-4">
+          {[
+            { title: 'Receita', data: byRevenue.slice(0, 3), render: (s: typeof byRevenue[0]) => fmt(s.revenue) },
+            { title: 'Margem', data: byMargin.slice(0, 3), render: (s: typeof byMargin[0]) => `${s.marginBruta.toFixed(1)}%` },
+            { title: 'Clientes', data: byClients.slice(0, 3), render: (s: typeof byClients[0]) => String(s.clientsCount) },
+          ].map(r => (
+            <div key={r.title} className="bg-white rounded-xl border border-[#E5E7EB] p-4">
+              <p className="text-[10px] text-[#9CA3AF] font-medium uppercase tracking-wide mb-3">{r.title}</p>
+              <div className="space-y-2.5">
+                {r.data.map((s, i) => (
+                  <div key={s.id} className="flex items-center gap-2">
+                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${
+                      i === 0 ? 'bg-amber-100 text-amber-700' : i === 1 ? 'bg-[#F3F4F6] text-[#6B7280]' : 'bg-orange-50 text-orange-600'
+                    }`}>{i + 1}</span>
+                    <span className="text-sm text-[#111827] flex-1 truncate">{s.name}</span>
+                    <span className="text-sm font-semibold text-[#111827] tabular-nums">{r.render(s)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Alertas de Gestão */}
+      {(lowMargin.length > 0 || noGoal.length > 0) && (
+        <motion.div {...fadeUp(0.2)} className="space-y-2">
+          <h3 className="text-sm font-semibold text-[#111827] flex items-center gap-2">
+            <AlertTriangle size={14} className="text-amber-500" /> Alertas de Gestão
+          </h3>
+          {lowMargin.length > 0 && (
+            <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+              <AlertTriangle size={14} className="text-amber-600 shrink-0" />
+              <p className="text-sm text-amber-800">
+                {lowMargin.length} vendedor(es) com margem abaixo de 20%: {lowMargin.map(s => s.name).join(', ')}
+              </p>
+            </div>
+          )}
+          {noGoal.length > 0 && (
+            <div className="flex items-center gap-3 bg-rose-50 border border-rose-200 rounded-lg px-4 py-3">
+              <Target size={14} className="text-rose-600 shrink-0" />
+              <p className="text-sm text-rose-800">
+                {noGoal.length} vendedor(es) sem meta configurada: {noGoal.map(s => s.name).join(', ')}
+              </p>
+            </div>
+          )}
+        </motion.div>
+      )}
 
       {/* Performance table */}
       <motion.div {...fadeUp(0.25)} className="bg-white rounded-xl border border-[#E5E7EB]">
@@ -453,14 +589,14 @@ function OperacionalTab({ data }: { data: ReturnType<typeof useGestorData> }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-[#F9FAFB]">
-            {sellersResult.filter(s => s.revenue > 0).map(s => (
+            {activeSellers.map(s => (
               <tr key={s.id} className="hover:bg-[#FAFAF9] transition-colors">
                 <td className="px-6 py-3 font-medium text-[#111827]">{s.name}</td>
                 <td className="px-4 py-3 text-right tabular-nums text-[#374151]">{s.ordersCount}</td>
                 <td className="px-4 py-3 text-right tabular-nums font-medium text-[#111827]">{fmt(s.revenue)}</td>
                 <td className="px-4 py-3 text-right tabular-nums text-[#374151]">{fmt(s.avgTicket)}</td>
                 <td className="px-4 py-3 text-right tabular-nums text-[#374151]">{s.clientsCount}</td>
-                <td className={`px-4 py-3 text-right tabular-nums font-semibold ${s.marginBruta >= 15 ? 'text-emerald-600' : s.marginBruta >= 0 ? 'text-amber-600' : 'text-red-600'}`}>{s.marginBruta.toFixed(1)}%</td>
+                <td className={`px-4 py-3 text-right tabular-nums font-semibold ${s.marginBruta >= 30 ? 'text-emerald-600' : s.marginBruta >= 15 ? 'text-amber-600' : 'text-red-600'}`}>{s.marginBruta.toFixed(1)}%</td>
                 <td className="px-6 py-3">
                   {s.salesTarget > 0 ? (
                     <div className="flex items-center gap-1.5">

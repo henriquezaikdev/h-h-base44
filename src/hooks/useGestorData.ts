@@ -107,14 +107,42 @@ interface MonthlyGoal {
    HELPERS
    ═══════════════════════════════════════════════════════════════════ */
 
-/** Effective date: approved_at if available, created_at as fallback */
-function orderDate(o: Order): string {
-  return String(o.approved_at ?? o.created_at).replace(' ', 'T')
+/** Build ISO date range for a given month (0-indexed) */
+function monthRange(y: number, m: number): { gte: string; lt: string } {
+  const start = new Date(y, m, 1)
+  const end = new Date(y, m + 1, 1)
+  return {
+    gte: start.toISOString(),
+    lt: end.toISOString(),
+  }
 }
 
-function inMonth(dateStr: string, y: number, m: number): boolean {
-  const d = new Date(dateStr)
-  return d.getFullYear() === y && d.getMonth() === m
+/** Paginated fetch — Supabase caps at 1000 rows per request */
+async function fetchAllOrders(gte: string, lt: string): Promise<Order[]> {
+  const PAGE = 1000
+  const all: Order[] = []
+  let offset = 0
+  let hasMore = true
+
+  while (hasMore) {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('id, total, subtotal, discount, status, seller_id, client_id, created_at, approved_at, nfe_status')
+      .eq('company_id', CID)
+      .neq('status', 'cancelled')
+      .gte('created_at', gte)
+      .lt('created_at', lt)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + PAGE - 1)
+
+    if (error) { console.error('[fetchAllOrders]', error); break }
+    const batch = (data ?? []) as Order[]
+    all.push(...batch)
+    hasMore = batch.length === PAGE
+    offset += PAGE
+  }
+
+  return all
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -124,7 +152,8 @@ function inMonth(dateStr: string, y: number, m: number): boolean {
 export function useGestorData(filters: GestorFilters) {
   const { year, month } = filters
   const [loading, setLoading] = useState(true)
-  const [allOrders, setAllOrders] = useState<Order[]>([])
+  const [currOrders, setCurrOrders] = useState<Order[]>([])
+  const [prevOrders, setPrevOrders] = useState<Order[]>([])
   const [allOrderItems, setAllOrderItems] = useState<OrderItem[]>([])
   const [sellers, setSellers] = useState<Seller[]>([])
   const [clients, setClients] = useState<Client[]>([])
@@ -132,13 +161,20 @@ export function useGestorData(filters: GestorFilters) {
   const [criticalProducts, setCriticalProducts] = useState<CriticalProduct[]>([])
   const [goals, setGoals] = useState<MonthlyGoal[]>([])
 
+  // Previous month
+  const pm = month === 0 ? 11 : month - 1
+  const py = month === 0 ? year - 1 : year
+
   const load = useCallback(async () => {
     setLoading(true)
 
-    const [ordersRes, sellersRes, clientsRes, payablesRes, productsRes, goalsRes] = await Promise.all([
-      supabase.from('orders')
-        .select('id, total, subtotal, discount, status, seller_id, client_id, created_at, approved_at, nfe_status')
-        .eq('company_id', CID).order('created_at', { ascending: false }).limit(10000),
+    const currRange = monthRange(year, month)
+    const prevRange = monthRange(py, pm)
+
+    // Parallel: orders (curr + prev), sellers, clients, payables, products, goals
+    const [currOrd, prevOrd, sellersRes, clientsRes, payablesRes, productsRes, goalsRes] = await Promise.all([
+      fetchAllOrders(currRange.gte, currRange.lt),
+      fetchAllOrders(prevRange.gte, prevRange.lt),
       supabase.from('sellers')
         .select('id, name, role, is_active, active, status')
         .eq('company_id', CID),
@@ -156,8 +192,8 @@ export function useGestorData(filters: GestorFilters) {
         .eq('company_id', CID).eq('month', month + 1).eq('year', year),
     ])
 
-    const allOrd = (ordersRes.data ?? []) as Order[]
-    setAllOrders(allOrd)
+    setCurrOrders(currOrd)
+    setPrevOrders(prevOrd)
     setSellers(sellersRes.data ?? [])
     setClients(clientsRes.data ?? [])
     setPayables(payablesRes.data ?? [])
@@ -166,13 +202,13 @@ export function useGestorData(filters: GestorFilters) {
     const prods = (productsRes.data ?? []) as CriticalProduct[]
     setCriticalProducts(prods.filter(p => p.stock_min > 0 && p.stock_qty < p.stock_min).slice(0, 10))
 
-    // Fetch order_items for current month
-    const currMonthIds = allOrd.filter(o => inMonth(orderDate(o), year, month)).map(o => o.id)
-    if (currMonthIds.length > 0) {
+    // Fetch order_items for current month orders
+    const currIds = currOrd.map(o => o.id)
+    if (currIds.length > 0) {
       const batchSize = 200
       const items: OrderItem[] = []
-      for (let i = 0; i < currMonthIds.length; i += batchSize) {
-        const batch = currMonthIds.slice(i, i + batchSize)
+      for (let i = 0; i < currIds.length; i += batchSize) {
+        const batch = currIds.slice(i, i + batchSize)
         const { data } = await supabase.from('order_items')
           .select('order_id, qty, unit_price, cost_at_sale, commission_pct')
           .in('order_id', batch)
@@ -184,20 +220,13 @@ export function useGestorData(filters: GestorFilters) {
     }
 
     setLoading(false)
-  }, [year, month])
+  }, [year, month, py, pm])
 
   useEffect(() => { load() }, [load])
 
-  // Derived: current + previous month
-  const pm = month === 0 ? 11 : month - 1
-  const py = month === 0 ? year - 1 : year
-
-  const orders = useMemo(() => allOrders.filter(o => inMonth(orderDate(o), year, month)), [allOrders, year, month])
-  const prevOrders = useMemo(() => allOrders.filter(o => inMonth(orderDate(o), py, pm)), [allOrders, py, pm])
-
-  // Approved orders (exclude cancelled)
-  const approved = useMemo(() => orders.filter(o => o.status !== 'cancelled'), [orders])
-  const prevApproved = useMemo(() => prevOrders.filter(o => o.status !== 'cancelled'), [prevOrders])
+  // Current month orders = already filtered server-side (non-cancelled)
+  const approved = currOrders
+  const prevApproved = prevOrders
 
   // KPIs
   const kpis = useMemo<GestorKPIs>(() => {
@@ -287,7 +316,7 @@ export function useGestorData(filters: GestorFilters) {
   return {
     loading,
     kpis,
-    orders,
+    orders: currOrders,
     prevOrders,
     approved,
     orderItems: allOrderItems,
