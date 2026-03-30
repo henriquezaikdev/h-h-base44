@@ -26,6 +26,7 @@ import OwnerMeuDia from './pages/OwnerMeuDia'
 import VendedorMeuDia from './pages/VendedorMeuDia'
 import MuralPage from './pages/MuralPage'
 import ConfiguracoesPage from './pages/ConfiguracoesPage'
+import GestorPage from './pages/GestorPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -119,6 +120,7 @@ export default function App() {
             <Route path="/estoque"      element={<EstoquePage />} />
             <Route path="/tarefas"      element={<TarefasPage />} />
             <Route path="/mural"        element={<MuralPage />} />
+            <Route path="/gestor" element={<GestorPage />} />
             <Route path="/configuracoes" element={<ConfiguracoesPage />} />
           </Route>
         </Route>

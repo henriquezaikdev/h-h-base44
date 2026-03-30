@@ -4,8 +4,10 @@ import {
   Settings, Building2, Users, Target, Save, Upload, Trash2,
   ImageIcon, UserPlus, KeyRound, Check, MoreVertical,
   AlertTriangle, Eye, EyeOff, Copy, CheckCircle2, XCircle,
-  UserCog, ShieldCheck, Pencil,
+  UserCog, ShieldCheck, Pencil, FileText, Link2,
 } from 'lucide-react'
+import AbaFiscal from '../components/configuracoes/AbaFiscal'
+import AbaEquivalencias from '../components/configuracoes/AbaEquivalencias'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useAppConfig, upsertAppConfig, useMonthlyGoals } from '../hooks/useConfiguracoesData'
@@ -91,11 +93,15 @@ export default function ConfiguracoesPage() {
             <TabsTrigger value="geral" className="text-xs gap-1.5"><Building2 size={13} /> Geral</TabsTrigger>
             <TabsTrigger value="usuarios" className="text-xs gap-1.5"><Users size={13} /> Usuários</TabsTrigger>
             <TabsTrigger value="metas" className="text-xs gap-1.5"><Target size={13} /> Metas</TabsTrigger>
+            <TabsTrigger value="fiscal" className="text-xs gap-1.5"><FileText size={13} /> Fiscal</TabsTrigger>
+            <TabsTrigger value="equivalencias" className="text-xs gap-1.5"><Link2 size={13} /> Equivalências</TabsTrigger>
           </TabsList>
 
           <TabsContent value="geral"><AbaGeral notify={notify} /></TabsContent>
           <TabsContent value="usuarios"><AbaUsuarios notify={notify} /></TabsContent>
           <TabsContent value="metas"><AbaMetas notify={notify} /></TabsContent>
+          <TabsContent value="fiscal"><AbaFiscal notify={notify} /></TabsContent>
+          <TabsContent value="equivalencias"><AbaEquivalencias notify={notify} /></TabsContent>
         </Tabs>
       </div>
 

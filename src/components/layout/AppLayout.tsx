@@ -12,6 +12,7 @@ import {
   Sparkles,
   Newspaper,
   Settings,
+  BarChart3,
   type LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
@@ -34,10 +35,11 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { to: '/financeiro',label: 'Financeiro', icon: Landmark        },
   { to: '/tarefas',   label: 'Tarefas',    icon: CheckSquare     },
   { to: '/mural',     label: 'Mural',      icon: Newspaper       },
+  { to: '/gestor',        label: 'Gestor',         icon: BarChart3   },
   { to: '/configuracoes', label: 'Configurações', icon: Settings   },
 ]
 
-const OWNER_ONLY = ['/configuracoes']
+const OWNER_ONLY = ['/gestor', '/configuracoes']
 
 const NAV_BY_ROLE: Record<SellerRole, string[]> = {
   owner:     ALL_NAV_ITEMS.map(i => i.to),

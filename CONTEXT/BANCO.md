@@ -410,10 +410,22 @@ Os hooks usam as colunas CRM (status_crm, priority_crm, task_date, etc.)
 | ambiente | text (homologacao, producao) |
 | serie | text |
 | natureza_operacao | text |
+| numero_inicial | integer |
 | created_at | timestamptz |
 | updated_at | timestamptz |
 
 **Segurança:** tokens nunca expostos no frontend — uso exclusivo em Edge Functions.
+
+### product_equivalences
+| Coluna | Tipo |
+|---|---|
+| id | uuid |
+| company_id | uuid |
+| product_id_a | uuid (fk → products) |
+| product_id_b | uuid (fk → products) |
+| created_at | timestamptz |
+
+**Uso:** produtos equivalentes comercialmente (ex: Report A4 ↔ Chamex A4). Interface em /configuracoes aba Equivalências.
 
 ---
 

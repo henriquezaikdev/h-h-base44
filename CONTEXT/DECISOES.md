@@ -448,3 +448,16 @@ Esse contexto é importante para entender por que certas decisões de arquitetur
 ### Supabase Storage
 - Bucket 'logos' criado (público) para upload de logo da empresa
 - Path padrão: {company_id}/logo.{ext}
+
+## SKILLS E COMPONENTES — REGRA DE USO (30/03/2026)
+
+### Skills instaladas (uso obrigatório quando aplicável)
+- frontend-design: aplicar em todo componente visual novo
+- Aceternity UI: disponível para elementos de destaque e animações
+- Phosphor icons: disponível como alternativa ao lucide-react em perfis e cards visuais
+- 21st.dev MCP: consultar obrigatoriamente antes de qualquer componente novo
+
+### Regra de aplicação
+- Toda vez que uma nova tela, página ou componente visual for construído, perguntar ao usuário ANTES de executar: "Aplicar as skills de design (frontend-design, Aceternity UI)?"
+- Não assumir que o padrão básico shadcn/ui é suficiente para telas novas
+- Skills foram instaladas para uso imediato — não são opcionais por padrão

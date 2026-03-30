@@ -239,17 +239,23 @@ Referência: Relatorios.tsx do Lovable (lido na íntegra)
 
 ## CRONOGRAMA REVISADO ATÉ 14/05/2026
 
-| Semana | Período | Bloco | Entregáveis |
-|---|---|---|---|
-| S1 | 27/03–04/04 | Cockpits + Deploy | ✅ Concluído |
-| S2 | 29/03 | Bloco 1 + Super Tela | ✅ Concluído (adiantado — badges, fila, processo, trigger, CarteiraEmRisco) |
-| S3 | 14/04–18/04 | Bloco 2 (parte 1) | Configurações: SQL + Edge Functions + Aba Empresa + Usuários |
-| S4 | 21/04–25/04 | Bloco 2 (parte 2) | Configurações: Metas + Fiscal + Equivalências |
-| S5 | 28/04–02/05 | Bloco 3 | Tela do Gestor completa |
-| S6 | 05/05–09/05 | Bloco 4 | Relatórios completos |
-| S7 | 12/05–14/05 | Bloco 5 + Testes | Entregador Online sync + teste completo todos os perfis |
+| Semana | Período | Bloco | Entregáveis | Status |
+|---|---|---|---|---|
+| S1 | 27/03–04/04 | Cockpits + Deploy | Deploy + Cockpits por perfil | ✅ Concluído |
+| S2 | 29/03 | Bloco 1 + Super Tela | Badges, fila, processo, trigger, CarteiraEmRisco | ✅ Concluído |
+| S3 | 14/04–18/04 | Bloco 2 (parte 1) | Configurações: SQL + Edge Functions + Aba Empresa + Usuários + Metas | ✅ Concluído |
+| S4 | 30/03 | Bloco 2 (parte 2) | Configurações: Aba Fiscal + Aba Equivalências | ✅ Concluído |
+| S4 | 30/03 | Bloco 3 | Tela do Gestor: Visão Executiva, Comercial (5 sub-abas), Financeiro, Relatório IA | ✅ Concluído |
+| — | Próximo | Bloco 4 | Relatórios (/relatorios): Vendas & Clientes, Comissões, Novos & Reativados, CSV | Pendente |
+| — | Próximo | Bipagem QR Code | Conferência de itens antes de embalar (picked em order_items, picked_at/picked_by em orders) | Pendente |
+| — | Próximo | Bloco 5 | Entregador Online sync: Edge Function + Cron 2h + UI em Configurações | Pendente |
 
-**Reserva:** Bloco 6 (XML → contas a pagar) entra na Fase 2 se S7 ficar apertado.
+**Ordem de execução dos blocos pendentes:**
+1. **Bloco 4 — Relatórios** (/relatorios): 3 abas + exportação CSV
+2. **Bipagem QR Code** — interface de conferência de itens antes de embalar (picked em order_items, picked_at e picked_by em orders já existem no banco)
+3. **Bloco 5 — Entregador Online sync**: Edge Function + Cron + UI
+
+**Reserva:** Bloco 6 (XML → contas a pagar) entra na Fase 2 se ficar apertado.
 
 ---
 
@@ -299,7 +305,6 @@ WHERE table_name = 'fin_sync_logs' ORDER BY ordinal_position;
 
 | Item | Observação |
 |---|---|
-| Bipagem QR Code na saída do pedido | Conferência antes de embalar |
 | IA Central (multi-modelo) | Claude/GPT/Gemini por custo |
 | Portal do cliente | Histórico, status, NFs para download |
 | Gamificação completa | XP, HCoins, níveis, loja de recompensas |

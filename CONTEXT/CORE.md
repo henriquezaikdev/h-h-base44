@@ -164,26 +164,25 @@ Módulos pendentes:
 Data: 30/03/2026
 
 Último concluído:
-- Redesign premium do ProfileHubContent.tsx (aba Perfil do Owner e Vendedor):
-  - Banner gradiente grafite→verde escuro (#0F0F0E → #1A2A1F)
-  - Avatar com ring animado verde-salva (#1A9E78/#2DD4A0)
-  - Ícones Phosphor (bold 18px) substituindo lucide-react no perfil
-  - Cards com hover effects (scale + border transition)
-  - Tabs animadas com indicator sliding
-  - Aba Métricas com barras de progresso e círculo SVG de eficiência
-  - Removido placeholder de gamificação
-- Componentes Aceternity UI instalados: noise-background, floating-dock
-- Pacotes adicionados: motion, @tabler/icons-react
-- Skill frontend-design instalada (.agents/skills/frontend-design)
+- Bloco 2 parte 2 — Configurações completo (5 abas):
+  - AbaFiscal.tsx: upsert em fiscal_config, tokens com máscara senha, ambiente, série, natureza operação, numero_inicial
+  - AbaEquivalencias.tsx: CRUD em product_equivalences, busca por nome, lista pares com delete
+- Bloco 3 — GestorPage.tsx completo (4 abas):
+  - Visão Executiva: 5 KPIs com delta vs mês anterior, ranking vendedores, top clientes
+  - Comercial: 5 sub-abas (Resumo, Vendedores, Pedidos, Vendas Diárias, Inativos)
+  - Financeiro: contas vencidas, a vencer, pagas (fin_payables)
+  - Relatório IA: contexto automático via assistente-cliente
+  - Rota /gestor no App.tsx, sidebar somente owner
+- BANCO.md atualizado com fiscal_config e product_equivalences
+- PLANEJAMENTO.md atualizado com ordem de blocos
 
 Em andamento:
-- Modo Interativo da tela de inativos (dark theme + animações) — pendente validação
+- Validação em produção das abas Fiscal e Gestor (pendente teste manual)
 
 Próximo passo:
-- Bloco 2 parte 2 (S4): Aba Fiscal + Aba Equivalências de Produtos
-- Bloco 3: Tela do Gestor (/gestor)
+- Bloco 4 — Relatórios (/relatorios): 3 abas (Vendas & Clientes, Comissões, Novos & Reativados), filtro período + vendedor, exportação CSV
 
 Observações:
-- Aba Fiscal e Equivalências explicitamente adiadas para S4
-- app_config usa schema key/value (não colunas fixas) — decisão arquitetural correta
-- Permissões por role são fixas no frontend (sem tabela dedicada): owner=tudo, admin=tudo, seller=sem Financeiro/Config, logistics=Estoque/Entregas/Tarefas/Mural, entregas=só dashboard
+- Relatório IA do Gestor usa assistente-cliente — monitorar se contexto é suficiente ou se precisará de Edge Function dedicada (gestor-ia-report)
+- Bipagem QR Code agendada após Bloco 4
+- Validar /gestor e /configuracoes em produção antes da próxima sessão
